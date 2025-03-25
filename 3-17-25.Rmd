@@ -1,0 +1,1733 @@
+---
+title: "Full Single-Cell RNA-seq Analysis Pipeline"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+    keep_tex: true
+header-includes:
+  - "\\providecommand{\\cat}[1]{#1}"
+date: "2025-03-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Helper Functions & Libraries
+
+```{r load-libraries}
+reportCellNumbers <- function(obj_list, step_name = "Unknown Step") {
+  results <- data.frame(
+    object_index = seq_along(obj_list),
+    sample_name  = sapply(obj_list, function(x) if (!is.null(x)) unique(x@meta.data$sample) else NA),
+    cell_number  = sapply(obj_list, function(x) if (!is.null(x)) ncol(x) else NA),
+    stringsAsFactors = FALSE
+  )
+  cat("\nCell Numbers -", step_name, ":\n")
+  print(results)
+  cat("\n")
+}
+
+library(tidyverse) # Useful (contains dplyr, ggplot2, etc.)  
+library(Seurat)
+library(clusterProfiler) # for enrichment analysis
+library(org.Mm.eg.db) # for enrichment analysis
+library(EnhancedVolcano) #volcano plots
+library(edgeR) #differential analysis 
+library(SingleR) #cell annotation
+library(celldex) #reference analysis
+library(patchwork) #combining ggplot2 plots
+library(topGO) #enrichment analysis
+library(RColorBrewer) #color palettes
+library(GEOquery) #to pull data from GEO
+library(SoupX) #RNA correction
+library(ggplot2)# essential for plotting
+library(ggpubr) #adding statistical annotations
+library(DoubletFinder) #identify doublets
+```
+#############Code explanation###########################
+The following function, reportCellNumbers, is designed to summarize key information for a list of objects (typically Seurat objects) and print out the results.
+
+1. Function Definition and Parameters:
+   - The function is defined as:
+     reportCellNumbers <- function(obj_list, step_name = "Unknown Step") { … }
+   - It takes two arguments:
+     • obj_list: a list of objects (for example, several Seurat objects).
+     • step_name: a character string that names the current processing step, with a default value of "Unknown Step". This string is used in the printed output to help identify the stage of processing.
+
+2. Constructing a Data Frame:
+   - Inside the function, a new data frame named results is created using the data.frame() function. This data frame contains three columns:
+     • object_index: created using seq_along(obj_list), it generates a numeric sequence corresponding to the position of each object within the list.
+     • sample_name: created using sapply() which applies a function to each element in obj_list. For each object ‘x’:
+         - The function checks if x is not NULL.
+         - If x is not NULL, it uses unique(x@meta.data$sample) to extract the unique sample names stored in the object's metadata (assuming the object has a @meta.data slot that contains a column named "sample").
+         - If x is NULL, it returns NA.
+     • cell_number: also built using sapply() that, for each object ‘x’:
+         - Checks if x is not NULL.
+         - If x is not NULL, it calls ncol(x) to get the number of columns in the object. In the context of Seurat objects, each column typically represents a cell, so ncol(x) returns the cell count.
+         - If x is NULL, it returns NA.
+   - The parameter stringsAsFactors = FALSE ensures that character vectors are not automatically converted into factors in the resulting data frame.
+
+3. Printing the Results:
+   - The function then uses cat() to print a header line that includes the step_name to indicate at which step of the processing the cell counts are being reported.
+   - It calls print(results) to display the data frame with the object indices, sample names, and cell counts.
+   - Finally, an extra cat("\n") is used to add a blank line in the output for readability.
+
+
+########################################################
+
+## 2. Read Data and Create Seurat Objects
+
+```{r read-data}
+# Define directories containing 10X data and a corresponding vector of sample names
+data_dirs <- c(
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/Naive",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/3d",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/7d",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/14d",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/GSM6166534_Aged_Naive",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/GSM6166535_Aged_3d",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/Old.7d",
+  "G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/Old.14d"
+)
+
+sample_names <- c(
+  "young_naive",
+  "young_3d",
+  "young_7d",
+  "young_14d",
+  "aged_naive",
+  "aged_3d",
+  "aged_7d",
+  "aged_14d"
+)
+
+# Read in the 10X data from each directory and create Seurat objects
+matrices <- lapply(data_dirs, Read10X)
+seuObj_s <- lapply(matrices, CreateSeuratObject)
+
+# Assign sample names to the meta.data slot of each Seurat object
+seuObj_s <- lapply(seq_along(seuObj_s), function(i) {
+  if (!is.null(seuObj_s[[i]])) {
+    seuObj_s[[i]]@meta.data$sample <- sample_names[i]
+  }
+  seuObj_s[[i]]
+})
+
+# Save the list of Seurat objects for future use
+saveRDS(seuObj_s, file = "raw_seuObj_s.rds")
+
+# Report cell numbers after reading data and assigning sample names
+reportCellNumbers(seuObj_s, "After Reading Data (Fixed Sample Names)")
+```
+```{r bonemarrow, blood and spleen}
+# Load required RData file that contains your integrated Seurat object
+load("G:/Mustafa/singlecell-2/SRA to seurat/Salvador/extracted/Rdata")
+
+# List objects in the environment for confirmation
+ls()
+
+# Check structure and metadata of the integrated Seurat object
+str(Neu_Integrated)
+head(Neu_Integrated@meta.data)
+colnames(Neu_Integrated@meta.data)
+unique(Neu_Integrated@meta.data$sample)
+unique(Neu_Integrated@meta.data$orig.ident)
+table(Neu_Integrated@meta.data$sample)
+
+# Subset the integrated object into separate objects for Blood, BoneMarrow, and Spleen
+Blood <- subset(Neu_Integrated, subset = sample == "Blood")
+BM    <- subset(Neu_Integrated, subset = sample == "BoneMarrow")
+Spleen <- subset(Neu_Integrated, subset = sample == "Spleen")
+
+# Save the separate objects for future use
+saveRDS(Blood, file = "Blood.rds")
+saveRDS(BM, file = "BM.rds")
+saveRDS(Spleen, file = "Spleen.rds")
+
+# Print tables to confirm subset
+table(Blood@meta.data$sample)
+table(BM@meta.data$sample)
+table(Spleen@meta.data$sample)
+```
+
+## 3. Pre-Doublet Finder Backup
+
+```{r pre-doublet-backup}
+# Backup the original Seurat objects before any doublet detection modifications.
+seuObj_s_preDoublet <- lapply(seuObj_s, identity)
+```
+
+## 4a. Check and Recalculate Doublet Detection (if needed)
+
+```{r doublet-detection, error = TRUE}
+# Add mitochondrial percentage to each Seurat object
+seuObj_s <- lapply(seuObj_s, function(x) {
+  if (is.null(x)) return(NULL)
+  x[["percent.mt"]] <- PercentageFeatureSet(x, pattern = "^mt-")
+  x
+})
+
+# Apply QC thresholds for each Seurat object
+seuObj_s <- lapply(seuObj_s, function(x) {
+  if (is.null(x)) return(NULL)
+  subset(x, subset = nFeature_RNA > 0 & nFeature_RNA < 6000 &
+           nCount_RNA > 0 & nCount_RNA < 60000 &
+           percent.mt < 10)
+})
+
+# Check for doublet detection column ("DF.classifications") and recalculate if needed
+seuObj_s <- lapply(seuObj_s, function(x) {
+  if (is.null(x)) return(NULL)
+  
+  if (!("DF.classifications" %in% colnames(x@meta.data))) {
+    cat(sprintf("Object %s does not have doublet annotations. Restoring from backup and recalculating...\n", 
+                unique(x@meta.data$sample)))
+    
+    # Find the corresponding backup object using the sample name
+    backup_index <- which(sapply(seuObj_s_preDoublet, function(y) {
+      !is.null(y) && (unique(y@meta.data$sample) == unique(x@meta.data$sample))
+    }))
+    # Use the first match if multiple are found
+    x <- seuObj_s_preDoublet[[backup_index[1]]]
+    
+    # Set default assay and ensure nCount_RNA and nFeature_RNA are available
+    DefaultAssay(x) <- "RNA"
+    if (!("nCount_RNA" %in% colnames(x@meta.data))) {
+      x[["nCount_RNA"]] <- Matrix::colSums(GetAssayData(x, slot = "counts"))
+    }
+    if (!("nFeature_RNA" %in% colnames(x@meta.data))) {
+      x[["nFeature_RNA"]] <- Matrix::colSums(GetAssayData(x, slot = "counts") > 0)
+    }
+    
+    # Normalize and scale data, then run PCA
+    x <- NormalizeData(x) %>% FindVariableFeatures() %>% ScaleData() %>% RunPCA(features = VariableFeatures(x))
+    
+    # Run a parameter sweep for doubletFinder settings and determine the optimal pK
+    sweep.res <- paramSweep(x, PCs = 1:10, sct = FALSE)
+    sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+    bcmvn <- find.pK(sweep.stats)
+    optimal_pK <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+    
+    # Estimate the expected number of doublets (7.5% of total cells)
+    nExp <- round(0.075 * ncol(x))
+    
+    # Re-run doubletFinder to add doublet classifications to the Seurat object
+    x <- doubletFinder(
+      x,
+      PCs = 1:10,
+      pN = 0.25,
+      pK = optimal_pK,
+      nExp = nExp,
+      reuse.pANN = FALSE,
+      sct = FALSE
+    )
+  }
+  
+  return(x)
+})
+```
+
+```{r doublet-detection-report}
+# Report the doublet detection results without altering the backup object.
+seuObj_s_with_doublets <- lapply(seq_along(seuObj_s), function(i) {
+  if (!is.null(seuObj_s[[i]])) {
+    cat("Seurat Object", i, "Doublet Detection Results:\n")
+    current_table <- table(as.character(seuObj_s[[i]]@meta.data$DF.classifications))
+    print(current_table)
+    # Return the original Seurat object (not the printed table)
+    return(seuObj_s[[i]])
+  } else {
+    return(NULL)
+  }
+})
+# Save the backup object for later use.
+saveRDS(seuObj_s_with_doublets, "seuObj_s_with_doublets.rds")
+cat("Completed reporting of singlets and doublets.\n\n")
+```
+
+```{r verify-metadata}
+# This chunk verifies the metadata for each Seurat object using the corresponding sample names.
+# Define sample names in order.
+sample_names <- c("young_naive", "young_3d", "young_7d", "young_14d",
+                  "aged_naive",  "aged_3d",  "aged_7d",  "aged_14d")
+
+# Load the RDS file containing the Seurat objects with doublet information.
+seuObj_s_with_doublets <- readRDS("seuObj_s_with_doublets.rds")
+
+cat("Starting metadata verification...\n\n")
+for (i in seq_along(seuObj_s_with_doublets)) {
+  obj <- seuObj_s_with_doublets[[i]]
+  
+  cat("======================================================\n")
+  # Use the corresponding sample name if available.
+  sample_label <- if (i <= length(sample_names)) sample_names[i] else paste("Element", i)
+  cat("Seurat Object:", sample_label, "\n")
+  
+  if (is.null(obj)) {
+    cat("This Seurat object is NULL.\n")
+    next
+  }
+  
+  if (!inherits(obj, "Seurat")) {
+    cat("Warning: This element is not a Seurat object. Its class is:", class(obj), "\n")
+    next
+  }
+  
+  cat("Metadata Columns:\n")
+  print(colnames(obj@meta.data))
+  
+  cat("Metadata Preview:\n")
+  print(head(obj@meta.data))
+  
+  if ("sample" %in% colnames(obj@meta.data)) {
+    cat("Unique sample values:\n")
+    print(unique(obj@meta.data$sample))
+  } else {
+    cat("Warning: 'sample' column not found in metadata!\n")
+  }
+  
+  doublet_cols <- grep("^DF\\.classifications", colnames(obj@meta.data), value = TRUE)
+  if (length(doublet_cols) > 0) {
+    cat("Doublet classification column(s) found:\n")
+    print(doublet_cols)
+    for (col in doublet_cols) {
+      cat("Frequency table for", col, ":\n")
+      print(table(as.character(obj@meta.data[[col]])))
+    }
+  } else {
+    cat("Warning: No doublet classification column found in metadata!\n")
+  }
+  cat("======================================================\n\n")
+}
+cat("Metadata verification completed.\n")
+```
+
+## Doublet Detection and Backup
+
+```{r doublet-backup}
+# Perform doublet detection backup: print the doublet detection results and save the objects.
+# This stores the original Seurat objects with the metadata column 'DF.classifications'.
+seuObj_s_with_doublets <- lapply(seq_along(seuObj_s), function(i) {
+  if (!is.null(seuObj_s[[i]])) {
+    cat("Seurat Object", i, "Doublet classification table:\n")
+    print(table(as.character(seuObj_s[[i]]@meta.data$DF.classifications)))
+    return(seuObj_s[[i]])
+  } else {
+    return(NULL)
+  }
+})
+
+# Save the backup object to an RDS file for later use.
+saveRDS(seuObj_s_with_doublets, "seuObj_s_with_doublets.rds")
+cat("Completed backup of singlets and doublets.\n\n")
+```
+
+## Produce a Summary Table of Singlet and Doublet Counts
+
+```{r summary-table}
+# Load the backup Seurat objects with doublet information
+seuObj_s_with_doublets <- readRDS("seuObj_s_with_doublets.rds")
+
+# Predefined sample names to assign to each object if not stored in metadata
+sample_names <- c(
+  "young_naive",
+  "young_3d",
+  "young_7d",
+  "young_14d",
+  "aged_naive",
+  "aged_3d",
+  "aged_7d",
+  "aged_14d"
+)
+
+# Function to produce a summary table of singlet and doublet counts.
+# This function searches for a doublet annotation column whose name starts with "DF.classifications".
+reportSingletDoubletCounts <- function(object_list, sample_names) {
+  summary_list <- list()
+  
+  for (i in seq_along(object_list)) {
+    seurat_obj <- object_list[[i]]
+    if (is.null(seurat_obj)) next
+    
+    # Use the sample name stored in metadata if available; otherwise, use the predefined sample name.
+    if ("sample" %in% colnames(seurat_obj@meta.data)) {
+      sample_val <- unique(seurat_obj@meta.data$sample)
+      sample_name <- if (length(sample_val) == 0 || all(is.na(sample_val))) sample_names[i] else as.character(sample_val[1])
+    } else {
+      sample_name <- sample_names[i]
+    }
+    
+    total_cells <- ncol(seurat_obj)
+    
+    # Detect the doublet annotation column using a regex to allow for varied column endings.
+    df_cols <- grep("^DF\\.classifications", colnames(seurat_obj@meta.data), value = TRUE)
+    if (length(df_cols) > 0) {
+      # Use the first matching column by default
+      df_col <- df_cols[1]
+      freq <- table(as.character(seurat_obj@meta.data[[df_col]]))
+      singlet_count <- if ("Singlet" %in% names(freq)) as.integer(freq["Singlet"]) else 0L
+      doublet_count <- if ("Doublet" %in% names(freq)) as.integer(freq["Doublet"]) else 0L
+    } else if ("doublet_class" %in% colnames(seurat_obj@meta.data)) {
+      freq <- table(as.character(seurat_obj@meta.data$doublet_class))
+      singlet_count <- if ("Singlet" %in% names(freq)) as.integer(freq["Singlet"]) else 0L
+      doublet_count <- if ("Doublet" %in% names(freq)) as.integer(freq["Doublet"]) else 0L
+    } else {
+      # If no doublet annotation is present, assume all cells are singlets.
+      singlet_count <- total_cells
+      doublet_count <- 0L
+    }
+    
+    summary_list[[i]] <- data.frame(
+      Object_Index = i,
+      Sample_Name = sample_name,
+      Total_Cells = total_cells,
+      Singlets = singlet_count,
+      Doublets = doublet_count,
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  summary_table <- do.call(rbind, summary_list)
+  # Order sample names according to the predefined order.
+  summary_table$Sample_Name <- factor(summary_table$Sample_Name, levels = sample_names)
+  summary_table <- summary_table[order(summary_table$Sample_Name), ]
+  return(summary_table)
+}
+
+# Generate and print the summary table.
+summary_table <- reportSingletDoubletCounts(seuObj_s_with_doublets, sample_names)
+print(summary_table)
+```
+
+## 4b. Remove Doublets from Each Seurat Object
+
+```{r remove-doublets}
+# Remove doublets from each Seurat object in the backup.
+seuObj_s <- lapply(seuObj_s_with_doublets, function(x) {
+  if (is.null(x)) return(NULL)
+  
+  # Find the doublet classification column by matching the pattern.
+  df_cols <- grep("^DF\\.classifications", colnames(x@meta.data), value = TRUE)
+  if (length(df_cols) > 0) {
+    # Use the first matching column; update the object's metadata for convenience.
+    df_col <- df_cols[1]
+    x$doublet_class <- x@meta.data[[df_col]]
+    # Subset the object to keep only cells labeled as singlets.
+    x <- subset(x, subset = doublet_class == "Singlet")
+  } else {
+    # If no doublet column is found, assume all cells are singlets.
+    warning("No DF.classifications column found; assuming all cells are singlets.")
+  }
+  
+  return(x)
+})
+
+# Print the first few entries to verify changes.
+head(seuObj_s)
+print(seuObj_s)
+
+# Create a variable for singlets to be used in downstream analyses.
+seuObj_s_singlets <- seuObj_s
+
+# Generate and print the summary table after doublet removal.
+summary_table <- reportSingletDoubletCounts(seuObj_s_singlets, sample_names)
+print(summary_table)
+
+# Report cell numbers after removal using a pre-defined function.
+reportCellNumbers(seuObj_s_singlets, "After Doublet Removal - Singlets Only")
+
+# Save the processed Seurat objects with singlets only.
+saveRDS(seuObj_s_singlets, "seuObj_s_singlets.rds")
+```
+
+## 5. Assign Age & Time Metadata
+
+```{r assign-metadata}
+# Assign metadata (age, time, sample) to each Seurat object in seuObj_s
+sample_names <- c("young_naive", "young_3d", "young_7d", "young_14d",
+                  "aged_naive", "aged_3d", "aged_7d", "aged_14d")
+seuObj_s <- mapply(function(obj, age, time, sample) {
+  if (is.null(obj)) return(NULL)
+  obj@meta.data$age <- age
+  obj@meta.data$time <- time
+  obj@meta.data$sample <- sample
+  obj
+}, seuObj_s, 
+age = c("Young", "Young", "Young", "Young", "Aged", "Aged", "Aged", "Aged"),
+time = c("Naive", "3 dpi", "7 dpi", "14 dpi", "Naive", "3 dpi", "7 dpi", "14 dpi"),
+sample = sample_names,
+SIMPLIFY = FALSE)
+
+# Report cell numbers after assigning metadata
+reportCellNumbers(seuObj_s, "After Age/Time Assignment")
+```
+
+## 6. Merge All Seurat Objects into a Combined Object
+
+```{r merge-objects}
+# Merge individual Seurat objects into one combined Seurat object
+combined_seu <- merge(
+  x = seuObj_s[[1]],
+  y = seuObj_s[-1],
+  add.cell.ids = sample_names
+)
+cat("\nCells in combined_seu:\n")
+dim_combined <- dim(combined_seu)
+cat("Number of features (rows):", dim_combined[1], "\n")
+cat("Number of cells (columns):", dim_combined[2], "\n\n")
+
+# Normalize the combined Seurat object
+combined_seu <- NormalizeData(combined_seu)
+```
+
+```{r integrate}
+# Pre-process and integrate a list of Seurat objects (seuObj_s)
+
+# If not already normalized and with variable features identified, process each object individually
+seuObj_s <- lapply(seuObj_s, function(x) {
+  x <- NormalizeData(x)
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+  return(x)
+})
+
+# Select features that are repeatedly variable for integration
+integration_features <- SelectIntegrationFeatures(object.list = seuObj_s)
+
+# Find integration anchors using the selected features
+anchors <- FindIntegrationAnchors(
+  object.list = seuObj_s,
+  anchor.features = integration_features
+)
+
+# Integrate the data into a new assay named "integrated"
+combined_seu <- IntegrateData(
+  anchorset = anchors, 
+  new.assay.name = "integrated"
+)
+
+# Check and set sample factor levels
+unique_samples <- unique(combined_seu@meta.data$sample)
+cat("Unique sample values before setting factor levels:\n")
+print(unique_samples)
+
+sample_names <- c(
+  "young_naive",
+  "young_3d",
+  "young_7d",
+  "young_14d",
+  "aged_naive",
+  "aged_3d",
+  "aged_7d",
+  "aged_14d"
+)
+print(levels(combined_seu@meta.data$sample))
+
+combined_seu$sample <- factor(combined_seu$sample, levels = sample_names)
+
+# Check available assays and set the default assay to "integrated"
+available_assays <- names(combined_seu@assays)
+cat("Available assays in combined_seu:\n")
+print(available_assays)
+DefaultAssay(combined_seu) <- "integrated"
+
+# Output the dimensions of the integrated Seurat object
+cat("\nCells in combined_seu:\n")
+dim_combined <- dim(combined_seu)
+cat("Number of features (rows):", dim_combined[1], "\n")
+cat("Number of cells (columns):", dim_combined[2], "\n\n")
+
+# Downstream analysis: scale data and run PCA
+combined_seu <- ScaleData(combined_seu, verbose = FALSE)
+combined_seu <- RunPCA(combined_seu, npcs = 30, verbose = FALSE)
+
+# Re-affirm sample factor levels and print them
+combined_seu$sample <- factor(combined_seu$sample, levels = sample_names)
+print(levels(combined_seu$sample))
+
+# Run UMAP using the PCA reduction (first 30 PCs)
+combined_seu <- RunUMAP(combined_seu, reduction = "pca", dims = 1:30)
+
+# Generate a UMAP DimPlot with samples grouped in the specified order
+DimPlot(combined_seu, reduction = "umap", group.by = "sample") + ggtitle("Combined UMAP")
+
+# Save the integrated Seurat object for downstream analysis
+saveRDS(combined_seu, "seuObj_s_integrated.rds")
+```
+
+## 7. Initial QC Plots (Individual & Combined)
+
+```{r qc-plots}
+# Load integrated Seurat objects and perform QC plotting for individual objects
+readRDS("seuObj_s_integrated.rds")
+print(seuObj_s)
+
+# Calculate percent.mt (using "^mt-" for mouse data) for each object
+seuObj_s <- lapply(seuObj_s, function(x) {
+  x[["percent.mt"]] <- PercentageFeatureSet(x, pattern = "^mt-")
+  x
+})
+
+# Subset cells based on QC thresholds
+seuObj_s <- lapply(seuObj_s, function(x) {
+  if (is.null(x)) return(NULL)
+  subset(x, subset = nFeature_RNA > 0 & nFeature_RNA < 6000 &
+           nCount_RNA > 0 & nCount_RNA < 60000 &
+           percent.mt < 10)
+})
+
+# Assign age and time in a loop (custom logic based on object index)
+for (i in seq_along(seuObj_s)) {
+  if (i %in% c(1, 2, 3, 6)) {
+    age <- "Young"
+  } else {
+    age <- "Aged"
+  }
+  if (i %in% c(4, 6)) {
+    time <- "Naive"
+  } else {
+    time <- if (i == 1) 14 else if (i == 2) 3 else if (i == 3) 7 else if (i == 5) 3 else if (i == 7) 7 else 14
+  }
+  seuObj_s[[i]]@meta.data$age <- age
+  seuObj_s[[i]]@meta.data$time <- time
+}
+
+# Create a sample name by pasting age and time together
+for (i in seq_along(seuObj_s)) {
+  sample_name <- paste0(
+    seuObj_s[[i]]@meta.data$age, "_",
+    ifelse(seuObj_s[[i]]@meta.data$time == "Naive", "Naive", seuObj_s[[i]]@meta.data$time)
+  )
+  seuObj_s[[i]]@meta.data$sample <- sample_name
+}
+
+# Generate QC violin plots and save files for each object
+for (i in seq_along(seuObj_s)) {
+  age <- seuObj_s[[i]]@meta.data$age[1]
+  time <- seuObj_s[[i]]@meta.data$time[1]
+  title <- paste0(age, " ", time, " percent.mt")
+  
+  p1 <- VlnPlot(
+    object = seuObj_s[[i]], 
+    features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), 
+    group.by = "sample",
+    ncol = 3, 
+    pt.size = 0.1
+  ) + ggtitle(title)
+  
+  filename <- paste0("QC_Violin_", age, "_", time, ".png")
+  print(p1)
+  ggsave(filename, plot = p1)
+}
+
+# Generate FeatureScatter plots and save as PNG files
+for (i in seq_along(seuObj_s)) {
+  age <- seuObj_s[[i]]@meta.data$age[1]
+  time <- seuObj_s[[i]]@meta.data$time[1]
+  title <- paste0(age, " ", time, " Feature Scatter")
+  
+  p_feature1 <- FeatureScatter(
+    object = seuObj_s[[i]], 
+    feature1 = "nCount_RNA", 
+    feature2 = "nFeature_RNA"
+  ) + ggtitle(title)
+  
+  p_feature2 <- FeatureScatter(
+    object = seuObj_s[[i]], 
+    feature1 = "nCount_RNA", 
+    feature2 = "percent.mt"
+  ) + ggtitle(title)
+  
+  combinedfeatures <- p_feature1 + p_feature2
+  
+  filename <- paste0("FeatureScatter_", age, "_", time, ".png")
+  print(combinedfeatures)
+  ggsave(filename, plot = combinedfeatures, width = 26.67, height = 13.33, dpi = 300)
+}
+
+# Generate a combined QC violin plot for all samples
+p2 <- VlnPlot(
+  object = combined_seu,
+  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  group.by = "sample",
+  pt.size = 0.1,
+  ncol = 3
+) + ggtitle("QC Metrics Across All Samples")
+print(p2)
+ggsave("QC_Violin_AllSamples.png", plot = p2)
+```
+
+## 8. Create a Combined FeatureScatter Plot (ggplot2) & Order Legend
+
+```{r combined-featurescatter}
+# Create a combined FeatureScatter plot for all samples using combined_seu metadata
+data_meta <- combined_seu@meta.data
+
+data_meta$sample <- factor(data_meta$sample, 
+                           levels = c("Young_14", "Young_3", "Young_7", "Young_Naive", 
+                                      "Aged_Naive", "Aged_3", "Aged_7", "Aged_14"))
+
+p_combined <- ggplot(data_meta, aes(x = nCount_RNA, y = nFeature_RNA, color = sample)) +
+  geom_point(alpha = 0.5) +
+  ggtitle("Feature Scatter Plot: All Samples") +
+  theme_bw() +
+  theme(legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))
+print(p_combined)
+ggsave("FeatureScatter_AllSamples.png", plot = p_combined, width = 26.67, height = 13.33, dpi = 300)
+```
+
+## 9. Compare Different QC Thresholds on QC Plots
+
+```{r compare-qc-thresholds, error=TRUE}
+# Define two sets of QC thresholds: default and strict
+qc_thresholds_default <- list(
+  nFeature_min = 0,
+  nFeature_max = 8000,
+  percent.mt_max = 10
+)
+qc_thresholds_strict <- list(
+  nFeature_min = 0,
+  nFeature_max = 6000,
+  percent.mt_max = 5
+)
+
+# Subset the integrated object for each set of thresholds
+combined_seu_default <- subset(combined_seu, subset =
+  nFeature_RNA > qc_thresholds_default$nFeature_min & nFeature_RNA < qc_thresholds_default$nFeature_max &
+  nCount_RNA > 0 & nCount_RNA < 100000 & percent.mt < qc_thresholds_default$percent.mt_max)
+combined_seu_strict <- subset(combined_seu, subset =
+  nFeature_RNA > qc_thresholds_strict$nFeature_min & nFeature_RNA < qc_thresholds_strict$nFeature_max &
+  nCount_RNA > 0 & nCount_RNA < 100000 & percent.mt < qc_thresholds_strict$percent.mt_max)
+
+# Assign group factors for plotting
+combined_seu$group <- factor(
+  tolower(paste0(combined_seu$age, "_", gsub(" dpi", "d", combined_seu$time))),
+  levels = c("young_naive", "young_3dpi", "young_7dpi", "young_14dpi",
+             "aged_naive", "aged_3dpi", "aged_7dpi", "aged_14dpi")
+)
+
+combined_seu$sample <- factor(combined_seu$sample, 
+                              levels = c("Young_Naive", "Young_3", "Young_7", "Young_14",
+                                         "Aged_Naive", "Aged_3", "Aged_7", "Aged_14"))
+
+# Generate violin plots comparing default versus strict thresholds
+p_vln_default <- VlnPlot(
+  combined_seu_default,
+  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  group.by = "sample",
+  pt.size = 0.1,
+  ncol = 3
+) + ggtitle("Combined QC Metrics (Default Thresholds)")
+
+p_vln_strict <- VlnPlot(
+  combined_seu_strict,
+  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  group.by = "sample",
+  pt.size = 0.1,
+  ncol = 3
+) + ggtitle("Combined QC Metrics (Strict Thresholds)")
+
+combined_vln_thresh <- p_vln_default + p_vln_strict
+ggsave("Combined_QC_Violin_Thresholds_Comparison.png", plot = combined_vln_thresh)
+
+# Create scatter plots for each threshold strategy
+qc_meta_default <- combined_seu_default@meta.data
+qc_meta_strict <- combined_seu_strict@meta.data
+
+qc_meta_default$sample <- factor(qc_meta_default$sample, 
+                                 levels = c("Young_Naive", "Young_3", "Young_7", "Young_14",
+                                            "Aged_Naive", "Aged_3", "Aged_7", "Aged_14"))
+
+qc_meta_strict$sample <- factor(qc_meta_strict$sample, 
+                                levels = c("Young_Naive", "Young_3", "Young_7", "Young_14",
+                                           "Aged_Naive", "Aged_3", "Aged_7", "Aged_14"))
+
+p_scatter_default_nFeature_nCount <- ggplot(qc_meta_default, aes(x = nCount_RNA, y = nFeature_RNA, color = sample)) +
+  geom_point(alpha = 0.5) + ggtitle("nFeature vs nCount (Default Thresholds)") + theme_bw()
+
+p_scatter_strict_nFeature_nCount <- ggplot(qc_meta_strict, aes(x = nCount_RNA, y = nFeature_RNA, color = sample)) +
+  geom_point(alpha = 0.5) + ggtitle("nFeature vs nCount (Strict Thresholds)") + theme_bw()
+
+p_scatter_default_percent_mt <- ggplot(qc_meta_default, aes(x = nFeature_RNA, y = percent.mt, color = sample)) +
+  geom_point(alpha = 0.5) + ggtitle("percent.mt vs nFeature (Default Thresholds)") + theme_bw()
+
+p_scatter_strict_percent_mt <- ggplot(qc_meta_strict, aes(x = nFeature_RNA, y = percent.mt, color = sample)) +
+  geom_point(alpha = 0.5) + ggtitle("percent.mt vs nFeature (Strict Thresholds)") + theme_bw()
+
+combined_scatter_thresh <- (p_scatter_default_nFeature_nCount + p_scatter_strict_nFeature_nCount) /
+  (p_scatter_default_percent_mt + p_scatter_strict_percent_mt)
+ggsave("Combined_QC_FeatureScatter_Thresholds_Comparison.png", plot = combined_scatter_thresh)
+
+# Display the combined scatter plots
+combined_scatter_thresh
+```
+
+## 10. SoupX Testing (Ambient RNA Correction) with Error Handling
+```{r SoupX Testing, error = TRUE}
+# SoupX Testing: Define a custom autoEstCont function with error handling.
+autoEstCont <- function(sc, topMarkers = NULL, tfidfMin = 1.0, soupQuantile = 0.90, maxMarkers = 100,
+                        contaminationRange = c(0.01, 0.8), rhoMaxFDR = 0.2, priorRho = 0.05, priorRhoStdDev = 0.10,
+                        doPlot = TRUE, forceAccept = FALSE, verbose = TRUE) {
+  if (!"clusters" %in% colnames(sc$metaData))
+    stop("Clustering information must be supplied, run setClusters first.")
+  # Collapse counts by cluster
+  s <- split(rownames(sc$metaData), sc$metaData$clusters)
+  tmp <- do.call(cbind, lapply(s, function(e) rowSums(sc$toc[, e, drop = FALSE])))
+  ssc <- sc 
+  ssc$toc <- tmp
+  ssc$metaData <- data.frame(nUMIs = colSums(tmp), row.names = colnames(tmp))
+  
+  # Get best markers
+  soupProf <- ssc$soupProfile[order(ssc$soupProfile$est, decreasing = TRUE), ]
+  soupMin <- quantile(soupProf$est, soupQuantile)
+  if (is.null(topMarkers)) {
+    mrks <- quickMarkers(sc$toc, sc$metaData$clusters, N = Inf)
+    mrks <- mrks[order(mrks$gene, -mrks$tfidf), ]
+    mrks <- mrks[!duplicated(mrks$gene), ]
+    mrks <- mrks[order(-mrks$tfidf), ]
+    mrks <- mrks[mrks$tfidf > tfidfMin, ]
+  } else {
+    mrks <- topMarkers
+  }
+  tgts <- rownames(soupProf)[soupProf$est > soupMin]
+  filtPass <- mrks[mrks$gene %in% tgts, ]
+  tgts <- head(filtPass$gene, n = maxMarkers)
+  if (verbose)
+    message(sprintf("%d genes passed tf-idf and soup quantile thresholds. Taking top %d.", nrow(mrks), length(tgts)))
+  if (length(tgts) == 0)
+    stop("No plausible marker genes found. Adjust tfidfMin or soupQuantile.")
+  if (length(tgts) < 10)
+    warning("Fewer than 10 marker genes found. Consider reducing tfidfMin or soupQuantile.")
+  
+  tmp <- as.list(tgts)
+  names(tmp) <- tgts
+  ute <- estimateNonExpressingCells(sc, tmp, maximumContamination = max(contaminationRange), FDR = rhoMaxFDR)
+  m <- rownames(sc$metaData)[match(rownames(ssc$metaData), sc$metaData$clusters)]
+  ute <- t(ute[m, , drop = FALSE])
+  colnames(ute) <- rownames(ssc$metaData)
+  
+  expCnts <- outer(ssc$soupProfile$est, ssc$metaData$nUMIs)
+  rownames(expCnts) <- rownames(ssc$soupProfile)
+  colnames(expCnts) <- rownames(ssc$metaData)
+  expCnts <- expCnts[tgts, , drop = FALSE]
+  obsCnts <- ssc$toc[tgts, , drop = FALSE]
+  pp <- ppois(obsCnts, expCnts * max(contaminationRange), lower.tail = TRUE)
+  qq <- p.adjust(pp, method = 'BH')
+  qq <- matrix(qq, nrow = nrow(pp), ncol = ncol(pp), dimnames = dimnames(pp))
+  rhos <- obsCnts / expCnts
+  rhoIdx <- t(apply(rhos, 1, function(e) order(order(e))))
+  dd <- data.frame(gene = rep(rownames(ute), ncol(ute)),
+                   passNonExp = as.vector(ute),
+                   rhoEst = as.vector(rhos),
+                   rhoIdx = as.vector(rhoIdx),
+                   obsCnt = as.vector(obsCnts),
+                   expCnt = as.vector(expCnts),
+                   isExpressedFDR = as.vector(qq))
+  dd$geneIdx <- match(dd$gene, mrks$gene)
+  dd$tfidf <- mrks$tfidf[dd$geneIdx]
+  dd$soupIdx <- match(dd$gene, rownames(soupProf))
+  dd$soupExp <- soupProf$est[dd$soupIdx]
+  dd$useEst <- dd$passNonExp
+  if (sum(dd$useEst) < 10)
+    warning("Fewer than 10 independent estimates. Consider adjusting parameters.")
+  if (verbose)
+    message(sprintf("Using %d independent estimates of rho.", sum(dd$useEst)))
+  p.L <- function(x, alpha) { if (x == 0) { 0 } else { qgamma(alpha, x) } }
+  p.U <- function(x, alpha) { qgamma(1 - alpha, x + 1) }
+  alpha <- 0.95
+  alpha <- (1 - alpha) / 2
+  dd$rhoHigh <- sapply(seq(nrow(dd)), function(e) p.U(dd$obsCnt[e], alpha) / dd$expCnt[e])
+  dd$rhoLow <- sapply(seq(nrow(dd)), function(e) p.L(dd$obsCnt[e], alpha) / dd$expCnt[e])
+  rhoProbes <- seq(0, 1, 0.001)
+  v2 <- (priorRhoStdDev / priorRho)**2
+  k <- 1 + v2**-2/2 * (1 + sqrt(1 + 4 * v2))
+  theta <- priorRho / (k - 1)
+  tmp_density <- sapply(rhoProbes, function(e) {
+    tmp <- dd[dd$useEst, ]
+    mean(dgamma(e, k + tmp$obsCnt, scale = theta / (1 + theta * tmp$expCnt)))
+  })
+  xx <- dgamma(rhoProbes, k, scale = theta)
+  w <- which(rhoProbes >= contaminationRange[1] & rhoProbes <= contaminationRange[2])
+  rhoEst <- (rhoProbes[w])[which.max(tmp_density[w])]
+  rhoFWHM <- range((rhoProbes[w])[which(tmp_density[w] >= (max(tmp_density[w]) / 2))])
+  contEst <- rhoEst
+  if (verbose)
+    message(sprintf("Estimated global rho of %.2f", rhoEst))
+  if (doPlot) {
+    plot(rhoProbes, tmp_density, type = 'l',
+         xlim = c(0, 1),
+         ylim = c(0, max(c(xx, tmp_density))),
+         frame.plot = FALSE,
+         xlab = 'Contamination Fraction',
+         ylab = 'Probability Density')
+    lines(rhoProbes, xx, lty = 2)
+    abline(v = rhoProbes[which.max(tmp_density)], col = 'red')
+    legend(x = 'topright',
+           legend = c(sprintf('prior rho %g(+/-%g)', priorRho, priorRhoStdDev),
+                      sprintf('post rho %g(%g,%g)', rhoEst, rhoFWHM[1], rhoFWHM[2]),
+                      'rho max'),
+           lty = c(2, 1, 1),
+           col = c('black', 'black', 'red'),
+           bty = 'n')
+  }
+  sc$fit <- list(dd = dd,
+                 priorRho = priorRho,
+                 priorRhoStdDev = priorRhoStdDev,
+                 posterior = tmp_density,
+                 rhoEst = rhoEst,
+                 rhoFWHM = rhoFWHM,
+                 markersUsed = mrks)
+  sc <- setContaminationFraction(sc, contEst, forceAccept = forceAccept)
+  return(sc)
+}
+```
+
+## 11. Differential Expression (DEG) Analysis for Each Sample
+
+```{r deg-analysis, error = TRUE}
+# Differential expression analysis for each Seurat object
+deg_results <- lapply(seuObj_s, function(x) {
+  if (is.null(x)) return(NULL)
+  
+  # Run clustering if needed for DEG analysis
+  if (is.null(x@meta.data$seurat_clusters)) {
+    message("seurat_clusters not found: Running FindNeighbors and FindClusters")
+    x <- FindNeighbors(x, reduction = "pca", dims = 1:10)
+    x <- FindClusters(x, resolution = 0.5)
+  }
+  
+  Idents(x) <- x$seurat_clusters
+  markers <- FindAllMarkers(x, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  return(markers)
+})
+
+# Save DEG results for sample 1 if available
+if (!is.null(deg_results[[1]])) {
+  print(head(deg_results[[1]]))
+  output_file <- "deg_results_sample1.csv"
+  write.csv(deg_results[[1]], file = output_file, row.names = FALSE)
+  message("Saved DEG results for sample 1 to ", output_file)
+  
+  top10 <- deg_results[[1]] %>%
+    group_by(cluster) %>%
+    top_n(n = 10, wt = avg_log2FC)
+  unique_genes <- unique(top10$gene)
+  cat("Creating dot plot for top markers...\n")
+  DotPlot(seuObj_s[[1]], features = unique_genes) + RotatedAxis()
+} else {
+  message("No DEG results available for sample 1.")
+}
+```
+
+## 12. UMAP with All Labeled Clusters for Cell Types (Integrated Object)
+
+```{r umap-visualization, error = TRUE}
+# UMAP visualization for combined integrated object with cell type labels
+print(names(combined_seu@reductions))
+available_assays <- names(combined_seu@assays)
+print(available_assays)
+
+ref.se <- ImmGenData()
+normcounts <- GetAssayData(combined_seu, assay = "integrated", slot = "data")
+pred <- SingleR(test = normcounts, ref = ref.se, labels = ref.se$label.main)
+combined_seu$cell_type <- pred$pruned.labels
+
+combined_seu <- ScaleData(combined_seu, verbose = FALSE)
+combined_seu <- RunPCA(combined_seu, npcs = 30, verbose = FALSE)
+combined_seu <- RunUMAP(combined_seu, reduction = "pca", dims = 1:30)
+p_umap_celltypes <- DimPlot(combined_seu, reduction = "umap", group.by = "cell_type",
+                            label = TRUE, pt.size = 0.5) + ggtitle("UMAP with Labeled Cell Types")
+print(p_umap_celltypes)
+ggsave("UMAP_CellTypes.png", plot = p_umap_celltypes)
+```
+
+```{r DEG neutrophils, error = TRUE}
+# Neutrophil-specific DEG analysis across samples using neutrophil marker genes
+sample_names <- c("young_naive", "young_3d", "young_7d", "young_14d",
+                  "aged_naive", "aged_3d", "aged_7g", "aged_14")  # adjust if needed
+
+neutro_markers <- c("Ly6g", "S100a8", "S100a9", "Mmp9", "Il1r2", "Camp", "Ltf")
+if (!exists("seuObj_s")) {
+  stop("The object 'seuObj_s' is not found. Please load your Seurat objects.")
+}
+if (length(seuObj_s) != length(sample_names)) {
+  stop("The number of Seurat objects does not match the number of sample_names provided.")
+}
+
+deg_neutro_results <- list()
+for (i in seq_along(seuObj_s)) {
+  sample_name <- sample_names[i]
+  message("Processing sample: ", sample_name)
+  sample_obj <- seuObj_s[[i]]
+  if (is.null(sample_obj)) {
+    warning("Seurat object for sample ", sample_name, " is NULL. Skipping.")
+    next
+  }
+  if (is.null(sample_obj@meta.data$seurat_clusters)) {
+    message("seurat_clusters not found in sample ", sample_name, ": Running clustering")
+    sample_obj <- FindNeighbors(sample_obj, reduction = "pca", dims = 1:10)
+    sample_obj <- FindClusters(sample_obj, resolution = 0.5)
+  }
+  Idents(sample_obj) <- sample_obj$seurat_clusters
+  markers <- FindAllMarkers(sample_obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  neutro_deg <- markers %>% filter(gene %in% neutro_markers)
+  deg_neutro_results[[sample_name]] <- neutro_deg
+  
+  if (nrow(neutro_deg) > 0) {
+    message("Found ", nrow(neutro_deg), " neutrophil marker entries in ", sample_name, ".")
+  } else {
+    message("No neutrophil markers found in ", sample_name, ".")
+  }
+}
+for (sample in names(deg_neutro_results)) {
+  outfile <- paste0("deg_neutrophil_", sample, ".csv")
+  write.csv(deg_neutro_results[[sample]], file = outfile, row.names = FALSE)
+  message("Saved neutrophil DEG results for ", sample, " to ", outfile)
+}
+
+output_dir <- "dotplots_neutrophil"
+if (!dir.exists(output_dir)) dir.create(output_dir)
+for (sample in sample_names) {
+  idx <- which(sample_names == sample)
+  sample_obj <- seuObj_s[[idx]]
+  if (is.null(sample_obj)) {
+    warning("Seurat object for sample ", sample, " is NULL. Skipping dot plot.")
+    next
+  }
+  neutro_genes <- unique(deg_neutro_results[[sample]]$gene)
+  if (length(neutro_genes) > 0) {
+    message("Creating dot plot for neutrophil markers in ", sample, "...")
+    p <- DotPlot(sample_obj, features = neutro_genes) + 
+         RotatedAxis() +
+         ggtitle(paste("Neutrophil Marker DotPlot:", sample))
+    output_file <- file.path(output_dir, paste0("dotplot_neutrophil_", sample, ".pdf"))
+    ggsave(output_file, plot = p, width = 8, height = 6)
+    message("Dot plot saved to: ", output_file)
+    print(p)
+  } else {
+    message("No neutrophil markers available for ", sample, ".")
+  }
+}
+```
+
+```{r Cell Types, error = TRUE}
+# Get the unique cell types
+unique_cell_types <- unique(combined_seu$cell_type)
+print(unique_cell_types)
+
+# Loop over each unique cell type and generate a violin plot if cells exist for that type.
+invisible(lapply(unique_cell_types, function(ct) {
+  # Subset the object for the current cell type
+  subset_obj <- subset(combined_seu, subset = cell_type == ct)
+  
+  # Print the number of cells for debugging
+  cat("Cell type:", ct, "- Number of cells:", ncol(subset_obj), "\n")
+  
+  # Skip if no cells are found
+  if (ncol(subset_obj) == 0) {
+    warning("No cells found for cell type: ", ct, ". Skipping plot generation.")
+    return(NULL)
+  }
+  
+  # Create the violin plot using valid marker genes
+  p <- VlnPlot(subset_obj, features = valid_marker_genes, pt.size = 0.1) +
+       ggtitle(paste("Expression in", ct))
+  
+  # Save the plot as a PNG file
+  out_file <- paste0("VlnPlot_", ct, "_markers.png")
+  ggsave(out_file, plot = p, width = 10, height = 6)
+  
+  # Optionally, print the plot to the console
+  print(p)
+  
+  return(NULL)
+}))
+```
+
+## 13. Additional Analyses: QC Summary, Marker Expression, and Detailed Cell Counts
+
+```{r additional-analyses , error = TRUE}
+# Additional analyses: QC summary, marker expression, and detailed cell counts
+
+if (exists("qc_summary")) {
+  print(qc_summary)
+}
+
+cell_types <- unique(combined_seu$cell_type)
+marker_genes <- c("Ly6g", "S100a8", "S100a9", "Mmp9", "Il1r2", "Camp", "Ltf")
+available_genes <- rownames(combined_seu)
+valid_marker_genes <- intersect(marker_genes, available_genes)
+if (length(valid_marker_genes) == 0) {
+  stop("None of the requested marker genes were found. Check available genes: ",
+       paste(head(available_genes, 10), collapse = ", "))
+} else if (length(valid_marker_genes) < length(marker_genes)) {
+  warning("Some marker genes not found. Using: ", paste(valid_marker_genes, collapse = ", "))
+}
+
+invisible(lapply(cell_types, function(ct) {
+  subset_obj <- subset(combined_seu, subset = cell_type == ct)
+  if (ncol(subset_obj) == 0) {
+    warning("No cells for cell type: ", ct, ". Skipping plot.")
+    return(NULL)
+  }
+  p <- VlnPlot(subset_obj, features = valid_marker_genes, pt.size = 0.1) +
+       ggtitle(paste("Expression in", ct))
+  out_file <- paste0("VlnPlot_", ct, "_markers.png")
+  ggsave(out_file, plot = p, width = 10, height = 6)
+  print(p)
+  NULL
+}))
+
+p_qc_expr <- VlnPlot(combined_seu, 
+                     features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+                     group.by = "group", 
+                     pt.size = 0.1, ncol = 3) + 
+  ggtitle("QC Metrics by Age-Time Groups")
+ggsave("QC_Expr_AgeTime.png", plot = p_qc_expr, width = 12, height = 6)
+
+cell_counts_table <- combined_seu@meta.data %>% 
+  group_by(cell_type, group) %>%
+  summarize(
+    cells = n(),
+    avg_nFeature = mean(nFeature_RNA, na.rm = TRUE),
+    avg_nCount = mean(nCount_RNA, na.rm = TRUE),
+    avg_percent.mt = mean(percent.mt, na.rm = TRUE)
+  )
+write.csv(cell_counts_table, "Cell_Counts_By_CellType_and_Group.csv", row.names = FALSE)
+print(cell_counts_table)
+```
+
+## 14. Neutrophil-Specific Analyses
+
+```{r neutrophil-analyses, error = TRUE}
+# Neutrophil-specific analyses: QC plots, filtering, and UMAP visualization
+
+neutrophils <- subset(combined_seu, subset = cell_type == "Neutrophils")
+if (ncol(neutrophils) == 0) {
+  stop("No neutrophils found in combined_seu. Verify cell type annotations.")
+}
+cat("Number of neutrophil cells:", ncol(neutrophils), "\n")
+summary(neutrophils@meta.data$nFeature_RNA)
+summary(neutrophils@meta.data$nCount_RNA)
+summary(neutrophils@meta.data$percent.mt)
+neutrophils[["percent.mt"]] <- PercentageFeatureSet(neutrophils, pattern = "^mt-")
+neutrophils <- subset(neutrophils, 
+  subset = nFeature_RNA > 0 & nFeature_RNA < 6000 &
+           nCount_RNA > 0 & nCount_RNA < 60000 &
+           percent.mt < 5)
+
+p_vln_neutro <- VlnPlot(neutrophils, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+                        group.by = "sample", pt.size = 0.1) + ggtitle("Neutrophils QC - Violin Plot")
+print(p_vln_neutro)
+ggsave("Neutrophils_QC_Violin.png", plot = p_vln_neutro)
+
+p1neutrophil <- FeatureScatter(neutrophils, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
+      ggtitle("Neutrophils: nCount_RNA vs nFeature_RNA")
+p2neutrophil <- FeatureScatter(neutrophils, feature1 = "nCount_RNA", feature2 = "percent.mt") +
+      ggtitle("Neutrophils: nCount_RNA vs percent.mt")
+wrapped_plots <- p1neutrophil + p2neutrophil
+print(wrapped_plots)
+ggsave("Neutrophils_FeatureScatter_Wrap.png", wrapped_plots, width = 10, height = 5)
+```
+
+
+
+```{r neutrophil thresholding, error = TRUE}
+# Neutrophil thresholding: set QC thresholds and annotate plots
+
+min_nFeature <- 0      
+max_nFeature <- 6000    
+max_percent_mt <- 5     
+
+cat("Applied thresholds:\n")
+cat("  - nFeature_RNA: >", min_nFeature, "and <", max_nFeature, "\n")
+cat("  - percent.mt: <", max_percent_mt, "\n")
+
+p_vln_thresholds <- p_vln_neutro +
+  geom_hline(yintercept = min_nFeature, linetype = "dashed", color = "red") +
+  geom_hline(yintercept = max_nFeature, linetype = "dashed", color = "red") +
+  geom_hline(data = data.frame(x = "percent.mt"), aes(yintercept = max_percent_mt), 
+             linetype = "dashed", color = "blue")
+print(p_vln_thresholds)
+ggsave("Neutrophils_QC_Violin_Thresholds.png", plot = p_vln_thresholds)
+
+p1_thresholds <- p1neutrophil +
+  geom_vline(xintercept = min_nFeature, linetype = "dotted", color = "red") +
+  geom_vline(xintercept = max_nFeature, linetype = "dotted", color = "red")
+p2_thresholds <- p2neutrophil +
+  geom_hline(yintercept = max_percent_mt, linetype = "dotted", color = "blue")
+wrapped_plots_thresholds <- p1_thresholds + p2_thresholds
+print(wrapped_plots_thresholds)
+ggsave("Neutrophils_FeatureScatter_Wrap_Thresholds.png", wrapped_plots_thresholds, width = 10, height = 5)
+
+filtered_neutrophils <- subset(neutrophils, subset = nFeature_RNA > min_nFeature &
+                                            nFeature_RNA < max_nFeature &
+                                            percent.mt < max_percent_mt)
+cat("Number of neutrophil cells after filtering:", ncol(filtered_neutrophils), "\n")
+saveRDS(filtered_neutrophils, file = "Filtered_Neutrophils.rds")
+```
+
+```{r neutrophil umap, error = TRUE}
+# Remove unwanted samples ("BoneMarrow", "Blood", "Spleen") from the Seurat object
+cells_to_keep <- rownames(neutrophils@meta.data)[!(
+  neutrophils@meta.data$sample %in% c("BoneMarrow", "Blood", "Spleen")
+)]
+filtered_neutrophils <- subset(neutrophils, cells = cells_to_keep)
+
+# Update the 'sample' factor levels by removing the unwanted levels
+filtered_neutrophils$sample <- factor(
+  filtered_neutrophils$sample, 
+  levels = setdiff(levels(neutrophils$sample), c("BoneMarrow", "Blood", "Spleen"))
+)
+
+# Verify filtering and the factor levels
+print(unique(filtered_neutrophils$sample))
+print(levels(filtered_neutrophils$sample))
+
+# Use the filtered object for downstream analysis
+neutrophils <- filtered_neutrophils
+
+# Set default assay to RNA
+DefaultAssay(neutrophils) <- "RNA"
+
+# Normalize the data
+neutrophils <- NormalizeData(neutrophils, verbose = FALSE)
+
+# Find variable features using the "vst" method
+neutrophils <- FindVariableFeatures(neutrophils, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+
+# Scale the data
+neutrophils <- ScaleData(neutrophils, verbose = FALSE)
+
+# Run PCA using the variable features
+neutrophils <- RunPCA(neutrophils, features = VariableFeatures(neutrophils))
+
+# Find neighbors using the PCA reduction (first 10 PCs)
+neutrophils <- FindNeighbors(neutrophils, reduction = "pca", dims = 1:10)
+
+# Cluster the cells (set resolution to 0.5)
+neutrophils <- FindClusters(neutrophils, resolution = 0.5)
+
+# Plot the Elbow Plot for PCA (to help decide the number of PCs)
+ElbowPlot(neutrophils)
+
+# Run UMAP using the first 10 principal components
+neutrophils <- RunUMAP(neutrophils, dims = 1:10)
+
+# Define sample order for plotting (if not predetermined, sort unique samples)
+sample_names <- sort(unique(neutrophils$sample))
+
+# Generate the UMAP plot colored by sample
+if ("seurat_clusters" %in% colnames(neutrophils@meta.data)) {
+  p_umap_neutro <- DimPlot(
+    neutrophils, 
+    reduction = "umap", 
+    group.by = "sample", 
+    label = TRUE, 
+    pt.size = 0.5
+  ) + 
+    scale_color_discrete(limits = sample_names) +
+    ggtitle("UMAP - Neutrophils by Samples")
+  print(p_umap_neutro)
+  # Save the UMAP plot to a file
+  ggsave("UMAP_Neutrophils_Clusters.png", plot = p_umap_neutro, width = 8, height = 6)
+} else {
+  message("seurat_clusters column not found in neutrophils metadata.")
+}
+
+# Generate cluster counts per sample and save as CSV
+neutro_cluster_counts <- as.data.frame(table(neutrophils$sample))
+neutro_cluster_counts$Cluster <- factor(neutro_cluster_counts$Var1, levels = sample_names)
+neutro_cluster_counts <- neutro_cluster_counts[order(neutro_cluster_counts$Cluster), ]
+colnames(neutro_cluster_counts) <- c("Cluster", "Neutrophil_Count")
+write.csv(neutro_cluster_counts, "Neutrophils_Cluster_Counts.csv", row.names = FALSE)
+print(neutro_cluster_counts)
+```
+
+```{r neutrophils isolated, error = TRUE}
+# Instead of passing the entire 'neutrophils' object, extract cell names from it.
+neutrophil_cells <- Cells(neutrophils)
+
+# Create a UMAP plot highlighting the neutrophils cells in combined_seu.
+p_umap_specific <- DimPlot(
+  object = combined_seu,
+  reduction = "umap",
+  label = FALSE,
+  pt.size = 0.5,
+  cells.highlight = neutrophil_cells  # Use a vector of cell names for highlighting
+) + 
+  ggtitle("UMAP with Neutrophils Highlighted") +
+  # Manually set legend labels by specifying breaks and labels.
+  scale_color_manual(
+    breaks = c("unselected", "Group_1"),
+    values = c("grey", "red"),
+    labels = c("other", "Neutrophils")
+  ) +
+  labs(color = "Cell Group")
+
+# Display and save the UMAP plot.
+print(p_umap_specific)
+ggsave("UMAP_Neutrophils_Highlighted.png", plot = p_umap_specific)
+```
+## 15. Neutrophil Marker Analysis by Age-Time Groups - Volcano Plots
+
+```{r neutrophil-volcano-plots, error = TRUE}
+sig_thresh <- 0.01
+# Initialize a list to store volcano plots.
+volcano_plots <- list()
+
+# Iterate over each unique cluster in the 'neutro_markers' data frame.
+unique_clusters <- unique(neutro_markers$cluster)
+for (grp in unique_clusters) {
+  grp_markers <- subset(neutro_markers, cluster == grp & p_val_adj < sig_thresh)
+  if (nrow(grp_markers) > 0) {
+    message("Generating volcano plot for group: ", grp)
+    p_volcano <- EnhancedVolcano(
+      grp_markers,
+      lab = grp_markers$gene,
+      x = "avg_log2FC",
+      y = "p_val_adj",
+      title = paste("Neutrophil Markers:", grp),
+      pCutoff = sig_thresh,
+      FCcutoff = 0.25,
+      pointSize = 3.0,
+      labSize = 3.0,
+      colAlpha = 1,
+      legendLabels = c("NS", "Log2 FC", "p-value", "p-value & Log2 FC"),
+      legendPosition = "right",
+      border = "full"
+    )
+    volcano_plots[[grp]] <- p_volcano
+    ggsave(paste0("Volcano_Neutrophil_Markers_", grp, ".png"),
+           plot = p_volcano, width = 8, height = 6)
+  } else {
+    message("No significant markers found for group: ", grp)
+  }
+}
+
+# Print the first volcano plot if available.
+if (length(volcano_plots) > 0) {
+  print(volcano_plots[[1]])
+} else {
+  message("No volcano plots were generated due to lack of significant markers.")
+}
+
+# Reference: https://metascape.org/gp/index.html#/main/step1
+```
+
+## 16. Neutrophil Marker Analysis by Age-Time Groups - Violin Plots with Significance Testing
+
+```{r neutrophil-violin-plots, error = TRUE}
+# Define sample factor levels and comparisons for age-time groups.
+comparisons <- list(
+  c("Young_Naive", "Aged_Naive"),
+  c("Young_3", "Aged_3"),
+  c("Young_7", "Aged_7"),
+  c("Young_14", "Aged_14")
+)
+
+# Set marker genes to analyze.
+neutrophil_marker_genes <- c("Ly6g", "S100a8", "S100a9", "Mmp9", "Il1r2", "Camp", "Ltf")
+
+# Loop through each marker gene to generate violin plots with significance testing.
+for (gene in neutrophil_marker_genes) {
+  # Fetch data for the current gene and its sample metadata from the neutrophils object.
+  expr_df <- FetchData(neutrophils, vars = c(gene, "sample"))
+  colnames(expr_df)[1] <- "expression"
+  
+  # Set the sample factor levels to maintain order.
+  expr_df$sample <- factor(expr_df$sample, 
+                           levels = c("Young_Naive", "Young_3", "Young_7", "Young_14",
+                                      "Aged_Naive", "Aged_3", "Aged_7", "Aged_14"))
+  
+  # Create the violin plot with a boxplot overlay and statistical comparisons.
+  pmarkergenes <- ggplot(expr_df, aes(x = sample, y = expression, fill = sample)) +
+    geom_violin(trim = TRUE, scale = "width") +
+    geom_boxplot(width = 0.1, outlier.shape = NA, alpha = 0.5) +
+    stat_compare_means(comparisons = comparisons, method = "wilcox.test",
+                       label = "p.signif", size = 5) +
+    labs(title = paste("Expression of", gene, "by Age-Time Group"),
+         x = "Age-Time Group",
+         y = paste(gene, "expression")) +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          plot.title = element_text(hjust = 0.5))
+  
+  # Print the plot.
+  print(pmarkergenes)
+  
+  # Save the plot to a PNG file.
+  ggsave(filename = paste0("Violin_NeutrophilMarker_", gene, ".png"),
+         plot = pmarkergenes, width = 10, height = 7)
+}
+```
+
+## 17. Neutrophil QC Exploration and Threshold Determination
+
+```{r neutrophil-qc-exploration, error = TRUE}
+# Explore quality control metrics and generate histogram/density plots.
+
+qc_stats <- neutrophils@meta.data %>% dplyr::select(nFeature_RNA, nCount_RNA, percent.mt) %>% summary()
+cat("\nQC Summary Statistics for Neutrophils:\n")
+print(qc_stats)
+
+p_hist_features <- ggplot(neutrophils@meta.data, aes(x = nFeature_RNA)) +
+  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
+  geom_density(color = "darkblue") +
+  ggtitle("Distribution of nFeature_RNA in Neutrophils")
+print(p_hist_features)
+ggsave("Neutrophils_nFeature_RNA_Hist.png", plot = p_hist_features, width = 8, height = 6)
+
+p_hist_counts <- ggplot(neutrophils@meta.data, aes(x = nCount_RNA)) +
+  geom_histogram(bins = 50, fill = "forestgreen", alpha = 0.7) +
+  geom_density(color = "darkgreen") +
+  ggtitle("Distribution of nCount_RNA in Neutrophils")
+print(p_hist_counts)
+ggsave("Neutrophils_nCount_RNA_Hist.png", plot = p_hist_counts, width = 8, height = 6)
+
+p_hist_mt <- ggplot(neutrophils@meta.data, aes(x = percent.mt)) +
+  geom_histogram(bins = 50, fill = "firebrick", alpha = 0.7) +
+  geom_density(color = "darkred") +
+  ggtitle("Distribution of percent.mt in Neutrophils")
+print(p_hist_mt)
+ggsave("Neutrophils_percent.mt_Hist.png", plot = p_hist_mt, width = 8, height = 6)
+```
+
+```{r marker featureplots, error = TRUE}
+neutrophil_marker_genes <- c("Ly6g", "S100a8", "S100a9", "Mmp9", "Il1r2", "Camp", "Ltf")
+# FeaturePlot for neutrophils.
+FeaturePlot(neutrophils, features = neutrophil_marker_genes)
+# FeaturePlot for the combined integrated object.
+FeaturePlot(combined_seu, features = neutrophil_marker_genes)
+```
+
+
+```{r neutrotime, error = TRUE}
+library(Seurat)
+library(ggplot2)
+library(ggpubr)
+library(rstatix)
+
+# Read in Blood, BM, and Spleen objects.
+Blood  <- readRDS("Blood.rds")
+BM     <- readRDS("BM.rds")
+Spleen <- readRDS("Spleen.rds")
+
+# Define "sample" metadata if not already set.
+Blood$sample   <- "Blood"
+BM$sample      <- "BoneMarrow"
+Spleen$sample  <- "Spleen"
+
+# Merge the additional objects with your existing 'neutrophils' object.
+neutrophils <- merge(neutrophils, y = c(Blood, BM, Spleen))
+
+# Define the list of genes for the bm module score calculation.
+bmGenes <- list(c("Mmp8", "Ifitm6", "Mmp25", "Retnlg", "Lcn2", "Olfm4", "Chil3", "Itgb2", "Fpr1", "Ltf", "Camp", "Lyz2", "Lyz1"))
+
+# Join layers and set default assay.
+neutrophils[["joined"]] <- JoinLayers(neutrophils[["RNA"]])
+DefaultAssay(neutrophils) <- "joined"
+
+# Define the desired order of samples.
+sample_order <- c("young_naive", "young_3d", "young_7d", "young_14d", 
+                  "aged_naive", "aged_3d", "aged_7d", "aged_14d", 
+                  "BoneMarrow", "Spleen", "Blood")
+neutrophils$sample <- factor(neutrophils$sample, levels = sample_order)
+
+# Add module scores for the bm gene set.
+neutrophils <- AddModuleScore(object = neutrophils, features = bmGenes, search = TRUE, assay = "joined", name = "neutrotimebm", ctrl = 20, nbin = 10)
+
+# Define early and late gene lists.
+earlyGenes_list <- list(c("Lyz2", "Ngp", "Wfdc21", "Camp", "Ifitm6", "Lcn2", "Ltf", "Arhgdib", "Mmp8", "Anxa1", "Prdx5", "Pglyrp1", "Cybb", "Ly6c2", "Chil3", "Dstn", "Cd177", "Pfn1", "Lgals3", "Ly6g", "Retnlg", "Adpgk", "Mgst1", "mt-Co1", "Serpinb1a", "Tkt", "Aldh2", "Capg", "Lamtor4", "Hmgn2"))
+lateGenes_list  <- list(c("Rpl41", "Cebpb", "Fgl2", "Lst1", "Junb", "Ifitm1", "Hbb-bt", "Jund", "Rps9", "Ccl6", "Dusp1", "Csf3r", "H2-D1", "Hba-a2", "Ftl1", "Wfdc17", "Fau", "Fth1", "Hba-a1", "Tyrobp", "Srgn", "Msrb1", "Btg1", "Ifitm2", "Malat1", "Rps27", "Fxyd5", "Hbb-bs"))
+
+# Add module scores for early and late gene lists.
+neutrophils <- AddModuleScore(object = neutrophils, features = earlyGenes_list, search = TRUE, assay = "joined", name = "neutrotimeEarly", ctrl = 20, nbin = 10)
+neutrophils <- AddModuleScore(object = neutrophils, features = lateGenes_list, search = TRUE, assay = "joined", name = "neutrotimeLate", ctrl = 20, nbin = 10)
+
+# Violin plots for bm, early, and late module scores.
+p_bm <- VlnPlot(neutrophils, features = "neutrotimebm1", group.by = "sample", pt.size = 0.1) + 
+  ggtitle("bm Scores") + xlab("Time (days)") + ylim(c(-0.5, 4.5))
+p_early <- VlnPlot(neutrophils, features = "neutrotimeEarly1", group.by = "sample", pt.size = 0.1) + 
+  ggtitle("Early Neutrotime Scores") + xlab("Time (days)") + ylim(c(-0.5, 3.5))
+p_late <- VlnPlot(neutrophils, features = "neutrotimeLate1", group.by = "sample", pt.size = 0.08) + 
+  ggtitle("Late Neutrotime Scores") + xlab("Time (days)") + ylim(c(0.0, 4.0))
+
+# Print the violin plots.
+print(p_bm)
+print(p_early)
+print(p_late)
+
+# Exclude BoneMarrow, Spleen, and Blood for UMAP plots.
+cells_to_keep <- colnames(neutrophils)[!(neutrophils$sample %in% c("BoneMarrow", "Blood", "Spleen"))]
+Idents(neutrophils) <- "sample"
+
+# UMAP plot for Early Neutrotime module score.
+umap_early <- FeaturePlot(
+  neutrophils,
+  features = "neutrotimeEarly1",
+  reduction = "umap",
+  label = TRUE,
+  pt.size = 0.5
+) + ggtitle("UMAP: Early Neutrotime Module Score by Sample")
+print(umap_early)
+
+# UMAP plot for Late Neutrotime module score.
+umap_late <- FeaturePlot(
+  neutrophils,
+  features = "neutrotimeLate1",
+  reduction = "umap",
+  label = TRUE,
+  pt.size = 0.5
+) + ggtitle("UMAP: Late Neutrotime Module Score")
+print(umap_late)
+
+# Combined UMAP plot blending early and late scores.
+combined_umap <- FeaturePlot(
+  neutrophils,
+  features = c("neutrotimeEarly1", "neutrotimeLate1"),
+  reduction = "umap",
+  blend = TRUE,
+  label = TRUE,
+  blend.threshold = 0.2,  # Adjust threshold as needed for clarity.
+  pt.size = 0.5
+) + ggtitle("Combined UMAP: Early (Red) and Late (Blue) Neutrotime Module Scores")
+print(combined_umap)
+
+# Optional: Save UMAP and violin plots.
+ggsave("Neutrotime_Early_Violin.png", plot = p_early, width = 8, height = 6, dpi = 300)
+ggsave("Neutrotime_Late_Violin.png", plot = p_late, width = 8, height = 6, dpi = 300)
+ggsave("UMAP_Early_Neutrotime.png", plot = umap_early, width = 8, height = 6, dpi = 300)
+ggsave("UMAP_Late_Neutrotime.png", plot = umap_late, width = 8, height = 6, dpi = 300)
+```
+
+```{r bm, error = TRUE}
+# This file handles Dunn’s and Wilcox tests for the 'bm' marker (neutrotimebm1)
+# Load required libraries if not already loaded.
+library(dplyr)
+library(ggpubr)
+library(rstatix)
+library(stringr)
+
+# --- Dunn's Test for bm Marker ---
+# Extract metadata from the neutrophils Seurat object.
+meta_df <- neutrophils[[]]
+
+# Perform Dunn's test on 'neutrotimebm1' across 'sample' groups.
+dunn_bm <- meta_df %>%
+  dunn_test(neutrotimebm1 ~ sample) %>%
+  add_significance()
+
+# If the significance label column "p.signif" is missing, create it based on adjusted p-values.
+if (!"p.signif" %in% colnames(dunn_bm)) {
+  dunn_bm$p.signif <- ifelse(dunn_bm$p.adj < 0.001, "***",
+                             ifelse(dunn_bm$p.adj < 0.01, "**",
+                                    ifelse(dunn_bm$p.adj < 0.05, "*", "ns")))
+}
+
+# Determine max y-value from the bm marker (for annotation placement).
+max_y <- max(meta_df$neutrotimebm1, na.rm = TRUE)
+dunn_bm <- dunn_bm %>% mutate(y.position = max_y + 0.5)
+
+# Add Dunn test significance annotations to existing violin plots.
+# (Assumes p_bm, p_early, and p_late plots already exist.)
+p_bm <- p_bm + stat_pvalue_manual(dunn_bm, label = "p.signif")
+
+# --- Wilcox Test for bm Marker ---
+# Define the comparisons for pairwise tests.
+comparisons <- list(
+  c("young_naive", "aged_naive"),
+  c("young_3d", "aged_3d"),
+  c("young_7d", "aged_7d"),
+  c("young_14d", "aged_14d")
+)
+
+# Fetch data for bm marker and sample metadata.
+expr_df <- FetchData(neutrophils, vars = c("neutrotimebm1", "sample"))
+
+# Create a violin plot for the bm marker with Wilcox test annotations.
+p_bm_wilcox <- ggplot(expr_df, aes(x = sample, y = neutrotimebm1, fill = sample)) +
+  geom_violin(trim = TRUE, scale = "width") +
+  stat_compare_means(
+    comparisons = comparisons, 
+    method = "wilcox.test",
+    label = "p.signif", 
+    size = 5
+  ) +
+  labs(
+    title = "Expression of bm Marker by Age-Time Group",
+    x = "Age-Time Group",
+    y = "bm Expression"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+print(p_bm_wilcox)
+ggsave(
+  filename = "Violin_Neutrophil_bm.png",
+  plot = p_bm_wilcox,
+  width = 10,
+  height = 7
+)
+
+# Additionally, create a separate ggplot for bm marker as an example.
+p_bm_stat <- ggplot(data = meta_df, aes(x = sample, y = neutrotimebm1)) +
+  geom_violin(aes(fill = after_stat(..density..))) +
+  ggtitle("bm Scores") +
+  xlab("Age-Time Group") +
+  ylim(c(-0.5, 4.5))
+print(p_bm_stat)
+```
+
+```{r early and late statistics, error = TRUE}
+# This file handles Early and Late Neutrotime Tests (both Dunn’s and Wilcox comparisons)
+library(dplyr)
+library(ggpubr)
+library(rstatix)
+library(ggplot2)
+library(stringr)
+
+# Extract metadata from neutrophils.
+meta_df <- neutrophils[[]]
+
+# Define comparisons for pairwise Wilcox tests.
+comparisons_list <- list(
+  c("young_naive", "aged_naive"),
+  c("young_3d", "aged_3d"),
+  c("young_7d", "aged_7d"),
+  c("young_14d", "aged_14d")
+)
+
+## --- Early Neutrotime Tests ---
+p_early_base <- VlnPlot(neutrophils, features = "neutrotimeEarly1", group.by = "sample", pt.size = 0.1) +
+  ggtitle("Early Neutrotime Scores") +
+  xlab("Time (days)") +
+  ylim(c(-0.5, 3.5))
+
+# Dunn's test for Early Neutrotime.
+dunn_early <- meta_df %>%
+  dunn_test(neutrotimeEarly1 ~ sample) %>%
+  add_significance() %>%
+  # Filter for comparisons between young and aged groups with matching time points.
+  filter((str_detect(group1, "^young_") & str_detect(group2, "^aged_")) |
+         (str_detect(group1, "^aged_") & str_detect(group2, "^young_"))) %>%
+  mutate(
+    time1 = str_replace(group1, "^(young_|aged_)", ""),
+    time2 = str_replace(group2, "^(young_|aged_)", "")
+  ) %>%
+  filter(time1 == time2) %>%
+  mutate(y.position = 3.3)
+
+p_early_dunn <- p_early_base +
+  stat_pvalue_manual(
+    data = dunn_early,
+    label = "p.adj.signif",
+    xmin = "group1",
+    xmax = "group2",
+    y.position = "y.position",
+    inherit.aes = FALSE,
+    tip.length = 0.01,
+    bracket.size = 0.5
+  )
+
+p_early_wilcox <- p_early_base +
+  stat_compare_means(
+    comparisons = comparisons_list,
+    method = "wilcox.test",
+    label = "p.signif",
+    size = 5,
+    hide.ns = TRUE
+  )
+
+## --- Late Neutrotime Tests ---
+p_late_base <- VlnPlot(neutrophils, features = "neutrotimeLate1", group.by = "sample", pt.size = 0.08) +
+  ggtitle("Late Neutrotime Scores") +
+  xlab("Time (days)") +
+  ylim(c(0.0, 4.0))
+
+dunn_late <- meta_df %>%
+  dunn_test(neutrotimeLate1 ~ sample) %>%
+  add_significance() %>%
+  filter((str_detect(group1, "^young_") & str_detect(group2, "^aged_")) |
+         (str_detect(group1, "^aged_") & str_detect(group2, "^young_"))) %>%
+  mutate(
+    time1 = str_replace(group1, "^(young_|aged_)", ""),
+    time2 = str_replace(group2, "^(young_|aged_)", "")
+  ) %>%
+  filter(time1 == time2) %>%
+  mutate(y.position = 3.8)
+
+p_late_dunn <- p_late_base +
+  stat_pvalue_manual(
+    data = dunn_late,
+    label = "p.adj.signif",
+    xmin = "group1",
+    xmax = "group2",
+    y.position = "y.position",
+    inherit.aes = FALSE,
+    tip.length = 0.01,
+    bracket.size = 0.5
+  )
+
+p_late_wilcox <- p_late_base +
+  stat_compare_means(
+    comparisons = comparisons_list,
+    method = "wilcox.test",
+    label = "p.signif",
+    size = 5,
+    hide.ns = TRUE
+  )
+
+# Display the Early Neutrotime plots.
+print(p_early_dunn)
+print(p_early_wilcox)
+
+# Display the Late Neutrotime plots.
+print(p_late_dunn)
+print(p_late_wilcox)
+```
+
+
+```{r statistics, error = TRUE}
+# This file performs additional statistical tests (pairwise Wilcoxon, Kruskal-Wallis) for early, late, and Bone Marrow module scores.
+library(dplyr)
+
+# Ensure meta_df is extracted.
+meta_df <- neutrophils[[]]
+
+# --- Early Neutrotime Statistics ---
+if ("neutrotimeEarly1" %in% colnames(meta_df)) {
+  pairwise_early <- pairwise.wilcox.test(meta_df$neutrotimeEarly1, meta_df$sample, p.adjust.method = "bonferroni")
+  print(pairwise_early)
+} else {
+  warning("Column 'neutrotimeEarly1' not found in metadata.")
+}
+
+# --- Late Neutrotime Statistics ---
+matComp_late <- data.frame(
+  day = meta_df$time, 
+  mat = meta_df$neutrotimeLate1
+)
+kruskal_late <- kruskal.test(mat ~ day, data = matComp_late)
+print(kruskal_late)
+pairwise_late <- pairwise.wilcox.test(matComp_late$mat, matComp_late$day, p.adjust.method = "bonferroni")
+print(pairwise_late)
+
+# --- Bone Marrow Statistics ---
+if ("BoneMarrow1" %in% colnames(meta_df)) {
+  matComp_bm <- data.frame(
+    day = meta_df$time, 
+    mat = meta_df$BoneMarrow1
+  )
+  kruskal_bm <- kruskal.test(mat ~ day, data = matComp_bm)
+  print(kruskal_bm)
+  pairwise_bm <- pairwise.wilcox.test(matComp_bm$mat, matComp_bm$day, p.adjust.method = "bonferroni")
+  print(pairwise_bm)
+} else {
+  warning("Column 'BoneMarrow1' not found in metadata. Skipping Bone Marrow tests.")
+}
+```  
+```  
