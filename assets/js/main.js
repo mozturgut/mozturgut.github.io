@@ -1,17 +1,7 @@
-/**
-* Template Name: iPortfolio
-* Template URL: https://bootstrapmade.com/iportfolio-bootstrap-portfolio-websites-template/
-* Updated: Jun 29 2024 with Bootstrap v5.3.3
-* Author: BootstrapMade.com
-* License: https://bootstrapmade.com/license/
-*/
-
 (function() {
   "use strict";
 
-  /**
-   * Header toggle
-   */
+  /* ----- Header toggle ----- */
   const headerToggleBtn = document.querySelector('.header-toggle');
 
   function headerToggle() {
@@ -21,33 +11,15 @@
   }
   headerToggleBtn.addEventListener('click', headerToggle);
 
-  /**
-   * Hide mobile nav on same-page/hash links
-   */
   document.querySelectorAll('#navmenu a').forEach(navmenu => {
     navmenu.addEventListener('click', () => {
       if (document.querySelector('.header-show')) {
         headerToggle();
       }
     });
-
   });
 
-  /**
-   * Toggle mobile nav dropdowns
-   */
-  document.querySelectorAll('.navmenu .toggle-dropdown').forEach(navmenu => {
-    navmenu.addEventListener('click', function(e) {
-      e.preventDefault();
-      this.parentNode.classList.toggle('active');
-      this.parentNode.nextElementSibling.classList.toggle('dropdown-active');
-      e.stopImmediatePropagation();
-    });
-  });
-
-  /**
-   * Preloader
-   */
+  /* ----- Preloader ----- */
   const preloader = document.querySelector('#preloader');
   if (preloader) {
     window.addEventListener('load', () => {
@@ -55,9 +27,7 @@
     });
   }
 
-  /**
-   * Scroll top button
-   */
+  /* ----- Scroll top button ----- */
   let scrollTop = document.querySelector('.scroll-top');
 
   function toggleScrollTop() {
@@ -67,18 +37,13 @@
   }
   scrollTop.addEventListener('click', (e) => {
     e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   window.addEventListener('load', toggleScrollTop);
   document.addEventListener('scroll', toggleScrollTop);
 
-  /**
-   * Animation on scroll function and init
-   */
+  /* ----- AOS init ----- */
   function aosInit() {
     AOS.init({
       duration: 600,
@@ -89,9 +54,7 @@
   }
   window.addEventListener('load', aosInit);
 
-  /**
-   * Init typed.js
-   */
+  /* ----- Typed.js ----- */
   const selectTyped = document.querySelector('.typed');
   if (selectTyped) {
     let typed_strings = selectTyped.getAttribute('data-typed-items');
@@ -99,26 +62,22 @@
     new Typed('.typed', {
       strings: typed_strings,
       loop: true,
-      typeSpeed: 100,
-      backSpeed: 50,
-      backDelay: 2000
+      typeSpeed: 80,
+      backSpeed: 40,
+      backDelay: 2500
     });
   }
 
-  /**
-   * Initiate Pure Counter
-   */
+  /* ----- PureCounter ----- */
   new PureCounter();
 
-  /**
-   * Animate the skills items on reveal
-   */
+  /* ----- Skills animation with Waypoints ----- */
   let skillsAnimation = document.querySelectorAll('.skills-animation');
   skillsAnimation.forEach((item) => {
     new Waypoint({
       element: item,
       offset: '80%',
-      handler: function(direction) {
+      handler: function() {
         let progress = item.querySelectorAll('.progress .progress-bar');
         progress.forEach(el => {
           el.style.width = el.getAttribute('aria-valuenow') + '%';
@@ -127,16 +86,12 @@
     });
   });
 
-  /**
-   * Initiate glightbox
-   */
+  /* ----- GLightbox ----- */
   const glightbox = GLightbox({
     selector: '.glightbox'
   });
 
-  /**
-   * Init isotope layout and filters
-   */
+  /* ----- Isotope filters ----- */
   document.querySelectorAll('.isotope-layout').forEach(function(isotopeItem) {
     let layout = isotopeItem.getAttribute('data-layout') ?? 'masonry';
     let filter = isotopeItem.getAttribute('data-default-filter') ?? '*';
@@ -156,26 +111,20 @@
       filters.addEventListener('click', function() {
         isotopeItem.querySelector('.isotope-filters .filter-active').classList.remove('filter-active');
         this.classList.add('filter-active');
-        initIsotope.arrange({
-          filter: this.getAttribute('data-filter')
-        });
+        initIsotope.arrange({ filter: this.getAttribute('data-filter') });
         if (typeof aosInit === 'function') {
           aosInit();
         }
       }, false);
     });
-
   });
 
-  /**
-   * Init swiper sliders
-   */
+  /* ----- Swiper sliders ----- */
   function initSwiper() {
     document.querySelectorAll(".init-swiper").forEach(function(swiperElement) {
       let config = JSON.parse(
         swiperElement.querySelector(".swiper-config").innerHTML.trim()
       );
-
       if (swiperElement.classList.contains("swiper-tab")) {
         initSwiperWithCustomPagination(swiperElement, config);
       } else {
@@ -183,13 +132,10 @@
       }
     });
   }
-
   window.addEventListener("load", initSwiper);
 
-  /**
-   * Correct scrolling position upon page load for URLs containing hash links.
-   */
-  window.addEventListener('load', function(e) {
+  /* ----- Hash link scroll correction ----- */
+  window.addEventListener('load', function() {
     if (window.location.hash) {
       if (document.querySelector(window.location.hash)) {
         setTimeout(() => {
@@ -204,9 +150,7 @@
     }
   });
 
-  /**
-   * Navmenu Scrollspy
-   */
+  /* ----- Navmenu scrollspy ----- */
   let navmenulinks = document.querySelectorAll('.navmenu a');
 
   function navmenuScrollspy() {
@@ -221,9 +165,82 @@
       } else {
         navmenulink.classList.remove('active');
       }
-    })
+    });
   }
   window.addEventListener('load', navmenuScrollspy);
   document.addEventListener('scroll', navmenuScrollspy);
+
+  /* ----- Neural Network Particle Canvas ----- */
+  const canvas = document.getElementById('particle-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let animationId;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function createParticles() {
+      particles = [];
+      const count = Math.floor((canvas.width * canvas.height) / 18000);
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          radius: Math.random() * 2 + 0.5
+        });
+      }
+    }
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(13, 148, 136, 0.5)';
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p.x - p2.x;
+          const dy = p.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(13, 148, 136, ${0.15 * (1 - dist / 120)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      });
+
+      animationId = requestAnimationFrame(drawParticles);
+    }
+
+    resizeCanvas();
+    createParticles();
+    drawParticles();
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      createParticles();
+    });
+  }
 
 })();
