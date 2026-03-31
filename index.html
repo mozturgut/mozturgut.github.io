@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Index - Mustafa Ozturgut</title>
-  <meta content="" name="description">
-  <meta content="" name="keywords">
+  <title>Mustafa Ozturgut | Computational Neuroscience &amp; scRNA-seq</title>
+  <meta name="description" content="Portfolio of Mustafa Ozturgut – single-cell RNA sequencing researcher specializing in spinal cord injury biology.">
+  <meta name="keywords" content="scRNA-seq, single cell RNA sequencing, spinal cord injury, neuroscience, bioinformatics, Seurat, UMAP">
 
   <!-- Favicons -->
   <link href="assets/img/favicon.png" rel="icon">
@@ -27,785 +27,989 @@
   <!-- Main CSS File -->
   <link href="assets/css/main.css" rel="stylesheet">
 
-  <!-- =======================================================
-  * Template Name: iPortfolio
-  * Template URL: https://bootstrapmade.com/iportfolio-bootstrap-portfolio-websites-template/
-  * Updated: Jun 29 2024 with Bootstrap v5.3.3
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
+  <!-- Custom portfolio styles -->
+  <style>
+    /* =====================================================================
+       Custom design tokens & overrides for Mustafa Ozturgut's portfolio
+       ===================================================================== */
+    :root {
+      --umap-about:        #FF6B9D;
+      --umap-research:     #BF5AF2;
+      --umap-skills:       #2DD4BF;
+      --umap-resume:       #34D399;
+      --umap-expertise:    #FBBF24;
+      --umap-contact:      #60A5FA;
+    }
+
+    /* ── Hero ── */
+    #hero {
+      position: relative;
+      overflow: hidden;
+      background: #04080f !important;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    /* hide template default bg image */
+    #hero > img { display: none !important; }
+
+    /* hero layout: text left, UMAP right */
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2.5rem;
+      align-items: center;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+      }
+      #spinal-umap-wrap {
+        display: flex;
+        justify-content: center;
+      }
+    }
+
+    .hero-text h2 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 0.4rem;
+    }
+    .hero-text h2 .name-accent { color: var(--umap-research); }
+    .hero-text .typed-wrap {
+      color: var(--umap-skills);
+      font-size: 1.15rem;
+      min-height: 2rem;
+      margin: 0.5rem 0 1.4rem;
+    }
+    .hero-text p {
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 0.97rem;
+      max-width: 470px;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--umap-research), var(--umap-skills));
+      color: #fff !important;
+      border: none;
+      padding: 0.65rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .hero-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(191, 90, 242, 0.45);
+      color: #fff !important;
+    }
+
+    /* ── Background particle canvas ── */
+    #hero-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero-inner { position: relative; z-index: 1; }
+
+    /* ── UMAP canvas container ── */
+    #spinal-umap-wrap { user-select: none; }
+    #spinal-umap {
+      display: block;
+      border-radius: 14px;
+      background: transparent;
+      max-width: 420px;
+      width: 100%;
+      height: auto;
+    }
+    .umap-caption {
+      text-align: center;
+      color: rgba(160, 190, 255, 0.35);
+      font-size: 0.68rem;
+      font-family: monospace;
+      margin-top: 5px;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Tooltip ── */
+    #umap-tooltip {
+      position: fixed;
+      background: rgba(4, 8, 18, 0.93);
+      border: 1px solid rgba(191, 90, 242, 0.4);
+      border-radius: 9px;
+      padding: 9px 15px;
+      color: #fff;
+      font-size: 0.82rem;
+      pointer-events: none;
+      display: none;
+      z-index: 9999;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      max-width: 220px;
+    }
+    #umap-tooltip .tt-name { font-weight: 700; }
+    #umap-tooltip .tt-sub  { color: rgba(200, 220, 255, 0.6); font-size: 0.72rem; margin-top: 3px; }
+
+    /* ── Section title underline accent ── */
+    .section-title h2::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--umap-research), var(--umap-skills));
+      margin: 8px auto 0;
+      border-radius: 2px;
+    }
+
+    /* ── Skill bars ── */
+    .progress-bar {
+      background: linear-gradient(90deg, var(--umap-research), var(--umap-skills)) !important;
+    }
+
+    /* ── Tool/technology tag pills ── */
+    .tool-tag {
+      display: inline-block;
+      padding: 3px 11px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin: 3px 2px;
+      background: rgba(45, 212, 191, 0.10);
+      color: var(--umap-skills);
+      border: 1px solid rgba(45, 212, 191, 0.22);
+      transition: all 0.2s;
+    }
+    .tool-tag:hover {
+      background: rgba(45, 212, 191, 0.20);
+      transform: translateY(-1px);
+    }
+
+    /* ── Research project cards ── */
+    .research-card {
+      background: var(--surface-color);
+      border-radius: 13px;
+      padding: 1.5rem 1.4rem;
+      height: 100%;
+      border: 1px solid rgba(191, 90, 242, 0.12);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .research-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cluster-color, #BF5AF2), transparent);
+    }
+    .research-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+      border-color: rgba(191, 90, 242, 0.35);
+    }
+    .cell-badge {
+      display: inline-block;
+      padding: 2px 11px;
+      border-radius: 50px;
+      font-size: 0.70rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.04em;
+    }
+    .research-card h4 {
+      font-size: 0.97rem;
+      font-weight: 700;
+      margin-bottom: 0.55rem;
+      line-height: 1.35;
+    }
+    .research-card p {
+      font-size: 0.86rem;
+      line-height: 1.6;
+      margin: 0 0 0.9rem;
+      opacity: 0.75;
+    }
+
+    /* ── Highlight info box ── */
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(191,90,242,0.07), rgba(45,212,191,0.07));
+      border: 1px solid rgba(191,90,242,0.18);
+      border-radius: 9px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .highlight-box strong { color: var(--umap-research); }
+
+    /* ── Stats icons ── */
+    .stats-item i { color: var(--umap-skills) !important; }
+
+    /* ── Footer ── */
+    .footer .sitename { color: var(--umap-skills) !important; }
+  </style>
 </head>
 
 <body class="index-page">
 
+  <!-- Fixed tooltip for UMAP hover -->
+  <div id="umap-tooltip">
+    <div class="tt-name"></div>
+    <div class="tt-sub"></div>
+  </div>
+
+  <!-- ================================================================
+       SIDEBAR / HEADER
+  ================================================================ -->
   <header id="header" class="header dark-background d-flex flex-column">
     <i class="header-toggle d-xl-none bi bi-list"></i>
 
     <div class="profile-img">
-      <img src="assets/img/my-profile-img.jpg" alt="" class="img-fluid rounded-circle">
+      <img src="assets/img/my-profile-img.jpg" alt="Mustafa Ozturgut" class="img-fluid rounded-circle">
     </div>
 
     <a href="index.html" class="logo d-flex align-items-center justify-content-center">
-      <!-- Uncomment the line below if you also wish to use an image logo -->
-      <!-- <img src="assets/img/logo.png" alt=""> -->
       <h1 class="sitename">Mustafa Ozturgut</h1>
     </a>
 
     <div class="social-links text-center">
-      <a href="#" class="twitter"><i class="bi bi-twitter-x"></i></a>
-      <a href="#" class="facebook"><i class="bi bi-facebook"></i></a>
-      <a href="#" class="instagram"><i class="bi bi-instagram"></i></a>
-      <a href="#" class="google-plus"><i class="bi bi-skype"></i></a>
-      <a href="#" class="linkedin"><i class="bi bi-linkedin"></i></a>
+      <a href="https://twitter.com/" class="twitter" title="Twitter/X" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter-x"></i></a>
+      <a href="https://github.com/mozturgut" class="github" title="GitHub" target="_blank" rel="noopener noreferrer"><i class="bi bi-github"></i></a>
+      <a href="https://www.linkedin.com/in/mustafa-ozturgut/" class="linkedin" title="LinkedIn" target="_blank" rel="noopener noreferrer"><i class="bi bi-linkedin"></i></a>
     </div>
 
     <nav id="navmenu" class="navmenu">
       <ul>
-        <li><a href="#hero" class="active"><i class="bi bi-house navicon"></i>Home</a></li>
+        <li><a href="#hero" class="active"><i class="bi bi-house navicon"></i> Home</a></li>
         <li><a href="#about"><i class="bi bi-person navicon"></i> About</a></li>
         <li><a href="#resume"><i class="bi bi-file-earmark-text navicon"></i> Resume</a></li>
-        <li><a href="#portfolio"><i class="bi bi-images navicon"></i> Portfolio</a></li>
-        <li><a href="#services"><i class="bi bi-hdd-stack navicon"></i> Services</a></li>
-        <li class="dropdown"><a href="#"><i class="bi bi-menu-button navicon"></i> <span>Dropdown</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
-          <ul>
-            <li><a href="#">Dropdown 1</a></li>
-            <li class="dropdown"><a href="#"><span>Deep Dropdown</span> <i class="bi bi-chevron-down toggle-dropdown"></i></a>
-              <ul>
-                <li><a href="#">Deep Dropdown 1</a></li>
-                <li><a href="#">Deep Dropdown 2</a></li>
-                <li><a href="#">Deep Dropdown 3</a></li>
-                <li><a href="#">Deep Dropdown 4</a></li>
-                <li><a href="#">Deep Dropdown 5</a></li>
-              </ul>
-            </li>
-            <li><a href="#">Dropdown 2</a></li>
-            <li><a href="#">Dropdown 3</a></li>
-            <li><a href="#">Dropdown 4</a></li>
-          </ul>
-        </li>
+        <li><a href="#research"><i class="bi bi-diagram-3 navicon"></i> Research</a></li>
+        <li><a href="#skills"><i class="bi bi-cpu navicon"></i> Skills</a></li>
+        <li><a href="#expertise"><i class="bi bi-lightbulb navicon"></i> Expertise</a></li>
         <li><a href="#contact"><i class="bi bi-envelope navicon"></i> Contact</a></li>
       </ul>
     </nav>
-
   </header>
 
   <main class="main">
 
-    <!-- Hero Section -->
+    <!-- ================================================================
+         HERO — Interactive Spinal Cord UMAP
+    ================================================================ -->
     <section id="hero" class="hero section dark-background">
 
-      <img src="assets/img/hero-bg.jpg" alt="" data-aos="fade-in" class="">
+      <!-- Ambient background particles -->
+      <canvas id="hero-particles"></canvas>
 
-      <div class="container" data-aos="fade-up" data-aos-delay="100">
-        <h2>Alex Smith</h2>
-        <p>I'm <span class="typed" data-typed-items="Designer, Developer, Freelancer, Photographer">Designer</span><span class="typed-cursor typed-cursor--blink" aria-hidden="true"></span><span class="typed-cursor typed-cursor--blink" aria-hidden="true"></span></p>
+      <!-- placeholder image hidden via CSS -->
+      <img src="assets/img/hero-bg.jpg" alt="" data-aos="fade-in">
+
+      <div class="container" data-aos="fade-up" data-aos-delay="50">
+        <div class="hero-inner">
+
+          <!-- Left: text -->
+          <div class="hero-text">
+            <h2>Mustafa <span class="name-accent">Ozturgut</span></h2>
+            <div class="typed-wrap">
+              <span class="typed" data-typed-items="scRNA-seq Researcher,Computational Neuroscientist,Spinal Cord Injury Biologist,Bioinformatics Developer"></span>
+            </div>
+            <p>
+              Decoding the single-cell transcriptome of the injured spinal cord —
+              one cell at a time. I integrate cutting-edge sequencing technology
+              with computational tools to understand how diverse cell populations
+              respond to injury and contribute to repair.
+            </p>
+            <a href="#about" class="hero-cta">
+              <i class="bi bi-arrow-down-circle"></i> Explore My Work
+            </a>
+          </div>
+
+          <!-- Right: Spinal Cord UMAP Canvas -->
+          <div id="spinal-umap-wrap">
+            <canvas id="spinal-umap" width="420" height="700"></canvas>
+            <p class="umap-caption">Hover clusters · Click to explore sections</p>
+          </div>
+
+        </div>
       </div>
+    </section><!-- /Hero -->
 
-    </section><!-- /Hero Section -->
-
-    <!-- About Section -->
+    <!-- ================================================================
+         ABOUT
+    ================================================================ -->
     <section id="about" class="about section">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
         <h2>About</h2>
-        <p>Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos quisquam cupiditate. Et nemo qui impedit suscipit alias ea. Quia fugiat sit in iste officiis commodi quidem hic quas.</p>
-      </div><!-- End Section Title -->
+        <p>
+          I use single-cell RNA sequencing to dissect the complex cellular landscape
+          of the spinal cord after traumatic injury — uncovering how each cell type
+          contributes to inflammation, degeneration, and potential regeneration.
+        </p>
+      </div>
 
       <div class="container" data-aos="fade-up" data-aos-delay="100">
-
         <div class="row gy-4 justify-content-center">
           <div class="col-lg-4">
-            <img src="assets/img/my-profile-img.jpg" class="img-fluid" alt="">
+            <img src="assets/img/my-profile-img.jpg" class="img-fluid" alt="Mustafa Ozturgut"
+                 style="border-radius: 12px;">
           </div>
           <div class="col-lg-8 content">
-            <h2>UI/UX Designer &amp; Web Developer.</h2>
+            <h2>Computational Neuroscience Researcher</h2>
             <p class="fst-italic py-3">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
-              magna aliqua.
+              Leveraging single-cell genomics to map the transcriptomic landscape of spinal cord
+              injury — characterizing every cell type from microglia to neurons at single-cell resolution.
             </p>
             <div class="row">
               <div class="col-lg-6">
                 <ul>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Birthday:</strong> <span>1 May 1995</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Website:</strong> <span>www.example.com</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Phone:</strong> <span>+123 456 7890</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>City:</strong> <span>New York, USA</span></li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Focus:</strong> <span>scRNA-seq &amp; SCI Biology</span></li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Primary Tool:</strong> <span>R / Seurat</span></li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Model Organism:</strong> <span>Mouse (<em>Mus musculus</em>)</span></li>
+                  <li><i class="bi bi-chevron-right"></i>
+                    <strong>GitHub:</strong>
+                    <span><a href="https://github.com/mozturgut" target="_blank" rel="noopener noreferrer">mozturgut</a></span>
+                  </li>
                 </ul>
               </div>
               <div class="col-lg-6">
                 <ul>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Age:</strong> <span>30</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Degree:</strong> <span>Master</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Email:</strong> <span>email@example.com</span></li>
-                  <li><i class="bi bi-chevron-right"></i> <strong>Freelance:</strong> <span>Available</span></li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Degree:</strong> <span>PhD Candidate</span></li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Field:</strong> <span>Neuroscience / Genomics</span></li>
+                  <li><i class="bi bi-chevron-right"></i>
+                    <strong>LinkedIn:</strong>
+                    <span><a href="https://www.linkedin.com/in/mustafa-ozturgut/" target="_blank" rel="noopener noreferrer">mustafa-ozturgut</a></span>
+                  </li>
+                  <li><i class="bi bi-chevron-right"></i> <strong>Status:</strong> <span>Open to Collaboration</span></li>
                 </ul>
               </div>
             </div>
             <p class="py-3">
-              Officiis eligendi itaque labore et dolorum mollitia officiis optio vero. Quisquam sunt adipisci omnis et ut. Nulla accusantium dolor incidunt officia tempore. Et eius omnis.
-              Cupiditate ut dicta maxime officiis quidem quia. Sed et consectetur qui quia repellendus itaque neque.
+              My research centers on using single-cell RNA sequencing to characterize the complex
+              cellular environment of the spinal cord following traumatic injury. By profiling
+              thousands of individual cells — neurons, astrocytes, microglia, oligodendrocytes,
+              macrophages, and infiltrating immune cells — I aim to identify key molecular drivers
+              of secondary injury and potential therapeutic targets for neuroprotection and regeneration.
             </p>
+            <div class="highlight-box">
+              <strong>Current focus:</strong> Neutrophil and macrophage heterogeneity in acute spinal
+              cord injury — dissecting transcriptional sub-states to understand pro- vs. anti-inflammatory
+              dynamics at single-cell resolution using CELLCALL and edgeR.
+            </div>
           </div>
         </div>
-
       </div>
 
-    </section><!-- /About Section -->
+    </section><!-- /About -->
 
-    <!-- Stats Section -->
+    <!-- ================================================================
+         STATS
+    ================================================================ -->
     <section id="stats" class="stats section">
-
       <div class="container" data-aos="fade-up" data-aos-delay="100">
-
         <div class="row gy-4">
 
           <div class="col-lg-3 col-md-6">
             <div class="stats-item">
-              <i class="bi bi-emoji-smile"></i>
-              <span data-purecounter-start="0" data-purecounter-end="232" data-purecounter-duration="1" class="purecounter"></span>
-              <p><strong>Happy Clients</strong> <span>consequuntur quae</span></p>
+              <i class="bi bi-circle-fill" style="color: var(--umap-research)"></i>
+              <span data-purecounter-start="0" data-purecounter-end="50000"
+                    data-purecounter-duration="1" class="purecounter"></span>
+              <p><strong>Cells Profiled</strong> <span>across SCI datasets</span></p>
             </div>
-          </div><!-- End Stats Item -->
+          </div>
 
           <div class="col-lg-3 col-md-6">
             <div class="stats-item">
-              <i class="bi bi-journal-richtext"></i>
-              <span data-purecounter-start="0" data-purecounter-end="521" data-purecounter-duration="1" class="purecounter"></span>
-              <p><strong>Projects</strong> <span>adipisci atque cum quia aut</span></p>
+              <i class="bi bi-diagram-3" style="color: var(--umap-skills)"></i>
+              <span data-purecounter-start="0" data-purecounter-end="12"
+                    data-purecounter-duration="1" class="purecounter"></span>
+              <p><strong>Cell Types</strong> <span>annotated in SCI model</span></p>
             </div>
-          </div><!-- End Stats Item -->
+          </div>
 
           <div class="col-lg-3 col-md-6">
             <div class="stats-item">
-              <i class="bi bi-headset"></i>
-              <span data-purecounter-start="0" data-purecounter-end="1453" data-purecounter-duration="1" class="purecounter"></span>
-              <p><strong>Hours Of Support</strong> <span>aut commodi quaerat</span></p>
+              <i class="bi bi-code-slash" style="color: var(--umap-resume)"></i>
+              <span data-purecounter-start="0" data-purecounter-end="8"
+                    data-purecounter-duration="1" class="purecounter"></span>
+              <p><strong>R Packages</strong> <span>in core pipeline</span></p>
             </div>
-          </div><!-- End Stats Item -->
+          </div>
 
           <div class="col-lg-3 col-md-6">
             <div class="stats-item">
-              <i class="bi bi-people"></i>
-              <span data-purecounter-start="0" data-purecounter-end="32" data-purecounter-duration="1" class="purecounter"></span>
-              <p><strong>Hard Workers</strong> <span>rerum asperiores dolor</span></p>
+              <i class="bi bi-journal-richtext" style="color: var(--umap-expertise)"></i>
+              <span data-purecounter-start="0" data-purecounter-end="5"
+                    data-purecounter-duration="1" class="purecounter"></span>
+              <p><strong>Projects</strong> <span>completed &amp; ongoing</span></p>
             </div>
-          </div><!-- End Stats Item -->
+          </div>
 
         </div>
-
       </div>
+    </section><!-- /Stats -->
 
-    </section><!-- /Stats Section -->
-
-    <!-- Skills Section -->
+    <!-- ================================================================
+         SKILLS
+    ================================================================ -->
     <section id="skills" class="skills section light-background">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
         <h2>Skills</h2>
-        <p>Necessitatibus eius consequatur ex aliquid fuga eum quidem sint consectetur velit</p>
-      </div><!-- End Section Title -->
+        <p>
+          Proficiency across the full scRNA-seq analysis stack — from raw count matrix
+          to biological interpretation — plus supporting bioinformatics and visualization tools.
+        </p>
+      </div>
 
       <div class="container" data-aos="fade-up" data-aos-delay="100">
-
         <div class="row skills-content skills-animation">
 
           <div class="col-lg-6">
-
             <div class="progress">
-              <span class="skill"><span>HTML</span> <i class="val">100%</i></span>
+              <span class="skill"><span>Seurat (R) — Clustering &amp; UMAP</span> <i class="val">95%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="95" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
             <div class="progress">
-              <span class="skill"><span>CSS</span> <i class="val">90%</i></span>
+              <span class="skill"><span>ggplot2 / Data Visualization</span> <i class="val">92%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
             <div class="progress">
-              <span class="skill"><span>JavaScript</span> <i class="val">75%</i></span>
+              <span class="skill"><span>Differential Expression (edgeR / DESeq2)</span> <i class="val">88%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="88" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
+            <div class="progress">
+              <span class="skill"><span>Cell Type Annotation (SingleR)</span> <i class="val">85%</i></span>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
           </div>
 
           <div class="col-lg-6">
-
             <div class="progress">
-              <span class="skill"><span>PHP</span> <i class="val">80%</i></span>
+              <span class="skill"><span>QC &amp; Ambient RNA (SoupX / DoubletFinder)</span> <i class="val">86%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="86" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
             <div class="progress">
-              <span class="skill"><span>WordPress/CMS</span> <i class="val">90%</i></span>
+              <span class="skill"><span>Cell–Cell Communication (CELLCALL / CellChat)</span> <i class="val">82%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
             <div class="progress">
-              <span class="skill"><span>Photoshop</span> <i class="val">55%</i></span>
+              <span class="skill"><span>Enrichment Analysis (clusterProfiler / topGO)</span> <i class="val">83%</i></span>
               <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="progress-bar" role="progressbar" aria-valuenow="83" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-            </div><!-- End Skills Item -->
-
+            </div>
+            <div class="progress">
+              <span class="skill"><span>Python (Scanpy / AnnData)</span> <i class="val">72%</i></span>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
           </div>
 
         </div>
 
+        <!-- Technology tag cloud -->
+        <div class="text-center mt-4" data-aos="fade-up" data-aos-delay="150">
+          <span class="tool-tag">Seurat</span>
+          <span class="tool-tag">SingleR</span>
+          <span class="tool-tag">edgeR</span>
+          <span class="tool-tag">DESeq2</span>
+          <span class="tool-tag">DoubletFinder</span>
+          <span class="tool-tag">SoupX</span>
+          <span class="tool-tag">clusterProfiler</span>
+          <span class="tool-tag">topGO</span>
+          <span class="tool-tag">CELLCALL</span>
+          <span class="tool-tag">CellChat</span>
+          <span class="tool-tag">EnhancedVolcano</span>
+          <span class="tool-tag">GEOquery</span>
+          <span class="tool-tag">patchwork</span>
+          <span class="tool-tag">ggplot2</span>
+          <span class="tool-tag">RColorBrewer</span>
+          <span class="tool-tag">Monocle3</span>
+          <span class="tool-tag">Scanpy</span>
+          <span class="tool-tag">AnnData</span>
+          <span class="tool-tag">R Markdown</span>
+          <span class="tool-tag">Git / GitHub</span>
+        </div>
       </div>
 
-    </section><!-- /Skills Section -->
+    </section><!-- /Skills -->
 
-    <!-- Resume Section -->
+    <!-- ================================================================
+         RESUME
+    ================================================================ -->
     <section id="resume" class="resume section">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
         <h2>Resume</h2>
-        <p>Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos quisquam cupiditate. Et nemo qui impedit suscipit alias ea. Quia fugiat sit in iste officiis commodi quidem hic quas.</p>
-      </div><!-- End Section Title -->
+        <p>
+          Academic background and research experience in computational neuroscience
+          and single-cell genomics.
+        </p>
+      </div>
 
       <div class="container">
-
         <div class="row">
 
           <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100">
-            <h3 class="resume-title">Sumary</h3>
-
+            <h3 class="resume-title">Summary</h3>
             <div class="resume-item pb-0">
-              <h4>Brandon Johnson</h4>
-              <p><em>Innovative and deadline-driven Graphic Designer with 3+ years of experience designing and developing user-centered digital/print marketing material from initial concept to final, polished deliverable.</em></p>
+              <h4>Mustafa Ozturgut</h4>
+              <p>
+                <em>Computational neuroscience researcher combining single-cell RNA sequencing
+                with advanced bioinformatics to decode the cellular response to spinal cord injury.
+                Proficient in the complete scRNA-seq analysis pipeline in R and Python.</em>
+              </p>
               <ul>
-                <li>Portland par 127,Orlando, FL</li>
-                <li>(123) 456-7891</li>
-                <li>alice.barkley@example.com</li>
+                <li>
+                  <a href="https://www.linkedin.com/in/mustafa-ozturgut/" target="_blank" rel="noopener noreferrer">
+                    linkedin.com/in/mustafa-ozturgut
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com/mozturgut" target="_blank" rel="noopener noreferrer">
+                    github.com/mozturgut
+                  </a>
+                </li>
               </ul>
-            </div><!-- Edn Resume Item -->
+            </div>
 
             <h3 class="resume-title">Education</h3>
             <div class="resume-item">
-              <h4>Master of Fine Arts &amp; Graphic Design</h4>
-              <h5>2015 - 2016</h5>
-              <p><em>Rochester Institute of Technology, Rochester, NY</em></p>
-              <p>Qui deserunt veniam. Et sed aliquam labore tempore sed quisquam iusto autem sit. Ea vero voluptatum qui ut dignissimos deleniti nerada porti sand markend</p>
-            </div><!-- Edn Resume Item -->
+              <h4>PhD Candidate — Neuroscience / Biomedical Sciences</h4>
+              <h5>Current</h5>
+              <p><em>[University — to be updated]</em></p>
+              <p>
+                Dissertation research on single-cell transcriptomic profiling of the spinal cord
+                after traumatic injury, with emphasis on inflammatory cell heterogeneity and
+                cell–cell communication networks.
+              </p>
+            </div>
 
             <div class="resume-item">
-              <h4>Bachelor of Fine Arts &amp; Graphic Design</h4>
-              <h5>2010 - 2014</h5>
-              <p><em>Rochester Institute of Technology, Rochester, NY</em></p>
-              <p>Quia nobis sequi est occaecati aut. Repudiandae et iusto quae reiciendis et quis Eius vel ratione eius unde vitae rerum voluptates asperiores voluptatem Earum molestiae consequatur neque etlon sader mart dila</p>
-            </div><!-- Edn Resume Item -->
-
+              <h4>Bachelor of Science — Biological Sciences</h4>
+              <h5>[Year – Year]</h5>
+              <p><em>[University — to be updated]</em></p>
+              <p>
+                Foundation in molecular biology, genetics, and computational biology.
+                Introduction to bioinformatics and next-generation sequencing data analysis
+                through undergraduate research.
+              </p>
+            </div>
           </div>
 
           <div class="col-lg-6" data-aos="fade-up" data-aos-delay="200">
-            <h3 class="resume-title">Professional Experience</h3>
+            <h3 class="resume-title">Research Experience</h3>
             <div class="resume-item">
-              <h4>Senior graphic design specialist</h4>
-              <h5>2019 - Present</h5>
-              <p><em>Experion, New York, NY </em></p>
+              <h4>Graduate Research Assistant — scRNA-seq &amp; SCI</h4>
+              <h5>[Year] – Present</h5>
+              <p><em>[Lab / Institution — to be updated]</em></p>
               <ul>
-                <li>Lead in the design, development, and implementation of the graphic, layout, and production communication materials</li>
-                <li>Delegate tasks to the 7 members of the design team and provide counsel on all aspects of the project. </li>
-                <li>Supervise the assessment of all graphic materials in order to ensure quality and accuracy of the design</li>
-                <li>Oversee the efficient use of production project budgets ranging from $2,000 - $25,000</li>
+                <li>
+                  Built and maintained the end-to-end scRNA-seq pipeline: ambient RNA
+                  correction (SoupX), doublet removal (DoubletFinder), QC filtering,
+                  normalization, dimensionality reduction, and clustering (Seurat).
+                </li>
+                <li>
+                  Annotated 12+ distinct cell populations in mouse SCI models using
+                  SingleR and marker-gene-based manual curation across &gt;50,000 profiled cells.
+                </li>
+                <li>
+                  Profiled neutrophil and macrophage transcriptional sub-states in acute
+                  SCI using CELLCALL ligand–receptor analysis and edgeR differential expression.
+                </li>
+                <li>
+                  Performed GO/KEGG enrichment (clusterProfiler, topGO) and produced
+                  publication-quality figures with ggplot2 and EnhancedVolcano.
+                </li>
               </ul>
-            </div><!-- Edn Resume Item -->
+            </div>
 
             <div class="resume-item">
-              <h4>Graphic design specialist</h4>
-              <h5>2017 - 2018</h5>
-              <p><em>Stepping Stone Advertising, New York, NY</em></p>
+              <h4>Undergraduate Research / Rotation</h4>
+              <h5>[Year – Year]</h5>
+              <p><em>[Lab / Institution — to be updated]</em></p>
               <ul>
-                <li>Developed numerous marketing programs (logos, brochures,infographics, presentations, and advertisements).</li>
-                <li>Managed up to 5 projects or tasks at a given time while under pressure</li>
-                <li>Recommended and consulted with clients on the most appropriate graphic design</li>
-                <li>Created 4+ design presentations and proposals a month for clients and account managers</li>
+                <li>Gained hands-on experience with bulk RNA-seq analysis and NGS data processing.</li>
+                <li>Assisted in mouse spinal cord injury surgeries and tissue collection protocols.</li>
+                <li>Contributed to bioinformatics workflows and literature reviews on glial biology.</li>
               </ul>
-            </div><!-- Edn Resume Item -->
-
+            </div>
           </div>
 
         </div>
-
       </div>
 
-    </section><!-- /Resume Section -->
+    </section><!-- /Resume -->
 
-    <!-- Portfolio Section -->
-    <section id="portfolio" class="portfolio section light-background">
+    <!-- ================================================================
+         RESEARCH PROJECTS
+    ================================================================ -->
+    <section id="research" class="portfolio section light-background">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
-        <h2>Portfolio</h2>
-        <p>Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos quisquam cupiditate. Et nemo qui impedit suscipit alias ea. Quia fugiat sit in iste officiis commodi quidem hic quas.</p>
-      </div><!-- End Section Title -->
+        <h2>Research Projects</h2>
+        <p>
+          Investigating the single-cell transcriptomic landscape of spinal cord injury —
+          from acute immune responses to chronic glial remodeling — using state-of-the-art
+          computational tools.
+        </p>
+      </div>
 
       <div class="container">
+        <div class="row gy-4">
 
-        <div class="isotope-layout" data-default-filter="*" data-layout="masonry" data-sort="original-order">
+          <!-- Project 1 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+            <div class="research-card" style="--cluster-color: #BF5AF2">
+              <span class="cell-badge"
+                style="background:rgba(191,90,242,0.12); color:#BF5AF2;">
+                Neutrophils
+              </span>
+              <h4>Neutrophil Heterogeneity in Acute SCI</h4>
+              <p>
+                Leveraging CELLCALL and Seurat to characterize transcriptional sub-states of
+                infiltrating neutrophils in the first 24–72 h post-injury. Identifying
+                pro-resolution vs. tissue-damaging sub-populations.
+              </p>
+              <span class="tool-tag" style="color:#BF5AF2;border-color:rgba(191,90,242,0.3);background:rgba(191,90,242,0.1)">CELLCALL</span>
+              <span class="tool-tag" style="color:#BF5AF2;border-color:rgba(191,90,242,0.3);background:rgba(191,90,242,0.1)">edgeR</span>
+              <span class="tool-tag" style="color:#BF5AF2;border-color:rgba(191,90,242,0.3);background:rgba(191,90,242,0.1)">Seurat</span>
+            </div>
+          </div>
 
-          <ul class="portfolio-filters isotope-filters" data-aos="fade-up" data-aos-delay="100">
-            <li data-filter="*" class="filter-active">All</li>
-            <li data-filter=".filter-app">App</li>
-            <li data-filter=".filter-product">Product</li>
-            <li data-filter=".filter-branding">Branding</li>
-            <li data-filter=".filter-books">Books</li>
-          </ul><!-- End Portfolio Filters -->
+          <!-- Project 2 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="150">
+            <div class="research-card" style="--cluster-color: #2DD4BF">
+              <span class="cell-badge"
+                style="background:rgba(45,212,191,0.12); color:#2DD4BF;">
+                Astrocytes
+              </span>
+              <h4>Reactive Astrogliosis at Single-Cell Resolution</h4>
+              <p>
+                Mapping astrocyte activation states along the injury gradient using UMAP
+                trajectory analysis and pseudotime inference. Distinguishing A1 neurotoxic
+                from A2 neuroprotective phenotypes in vivo.
+              </p>
+              <span class="tool-tag" style="color:#2DD4BF;border-color:rgba(45,212,191,0.3);background:rgba(45,212,191,0.1)">Seurat</span>
+              <span class="tool-tag" style="color:#2DD4BF;border-color:rgba(45,212,191,0.3);background:rgba(45,212,191,0.1)">Monocle3</span>
+              <span class="tool-tag" style="color:#2DD4BF;border-color:rgba(45,212,191,0.3);background:rgba(45,212,191,0.1)">SingleR</span>
+            </div>
+          </div>
 
-          <div class="row gy-4 isotope-container" data-aos="fade-up" data-aos-delay="200">
+          <!-- Project 3 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+            <div class="research-card" style="--cluster-color: #34D399">
+              <span class="cell-badge"
+                style="background:rgba(52,211,153,0.12); color:#34D399;">
+                Microglia
+              </span>
+              <h4>Microglial Polarization &amp; Cell–Cell Communication</h4>
+              <p>
+                Dissecting how resident microglia shift between homeostatic and
+                disease-associated states post-SCI. Using CellChat to map ligand–receptor
+                interactions with infiltrating macrophages and OPCs.
+              </p>
+              <span class="tool-tag" style="color:#34D399;border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.1)">CellChat</span>
+              <span class="tool-tag" style="color:#34D399;border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.1)">Seurat</span>
+              <span class="tool-tag" style="color:#34D399;border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.1)">ggplot2</span>
+            </div>
+          </div>
 
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/app-1.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>App 1</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/app-1.jpg" title="App 1" data-gallery="portfolio-gallery-app" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
+          <!-- Project 4 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="250">
+            <div class="research-card" style="--cluster-color: #FBBF24">
+              <span class="cell-badge"
+                style="background:rgba(251,191,36,0.12); color:#FBBF24;">
+                Macrophages
+              </span>
+              <h4>Macrophage Sub-state Dynamics in SCI Repair</h4>
+              <p>
+                Profiling peripheral macrophage infiltration and resident microglial
+                proliferation using time-series scRNA-seq at 1, 3, 7, and 14 days
+                post-injury. Exploring pro-regenerative macrophage sub-populations.
+              </p>
+              <span class="tool-tag" style="color:#FBBF24;border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.1)">edgeR</span>
+              <span class="tool-tag" style="color:#FBBF24;border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.1)">clusterProfiler</span>
+              <span class="tool-tag" style="color:#FBBF24;border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.1)">topGO</span>
+            </div>
+          </div>
 
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/product-1.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Product 1</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/product-1.jpg" title="Product 1" data-gallery="portfolio-gallery-product" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
+          <!-- Project 5 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+            <div class="research-card" style="--cluster-color: #60A5FA">
+              <span class="cell-badge"
+                style="background:rgba(96,165,250,0.12); color:#60A5FA;">
+                Oligodendrocytes
+              </span>
+              <h4>OPC Differentiation Trajectory Post-SCI</h4>
+              <p>
+                Reconstructing oligodendrocyte precursor cell (OPC) lineage trajectories
+                after injury to understand the failure of remyelination and identify gene
+                regulatory programs controlling OPC maturation.
+              </p>
+              <span class="tool-tag" style="color:#60A5FA;border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.1)">Monocle3</span>
+              <span class="tool-tag" style="color:#60A5FA;border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.1)">Seurat</span>
+              <span class="tool-tag" style="color:#60A5FA;border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.1)">DESeq2</span>
+            </div>
+          </div>
 
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/branding-1.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Branding 1</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/branding-1.jpg" title="Branding 1" data-gallery="portfolio-gallery-branding" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/books-1.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Books 1</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/books-1.jpg" title="Branding 1" data-gallery="portfolio-gallery-book" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/app-2.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>App 2</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/app-2.jpg" title="App 2" data-gallery="portfolio-gallery-app" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/product-2.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Product 2</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/product-2.jpg" title="Product 2" data-gallery="portfolio-gallery-product" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/branding-2.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Branding 2</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/branding-2.jpg" title="Branding 2" data-gallery="portfolio-gallery-branding" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/books-2.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Books 2</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/books-2.jpg" title="Branding 2" data-gallery="portfolio-gallery-book" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/app-3.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>App 3</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/app-3.jpg" title="App 3" data-gallery="portfolio-gallery-app" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/product-3.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Product 3</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/product-3.jpg" title="Product 3" data-gallery="portfolio-gallery-product" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/branding-3.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Branding 3</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/branding-3.jpg" title="Branding 2" data-gallery="portfolio-gallery-branding" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-            <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
-              <div class="portfolio-content h-100">
-                <img src="assets/img/portfolio/books-3.jpg" class="img-fluid" alt="">
-                <div class="portfolio-info">
-                  <h4>Books 3</h4>
-                  <p>Lorem ipsum, dolor sit amet consectetur</p>
-                  <a href="assets/img/portfolio/books-3.jpg" title="Branding 3" data-gallery="portfolio-gallery-book" class="glightbox preview-link"><i class="bi bi-zoom-in"></i></a>
-                  <a href="portfolio-details.html" title="More Details" class="details-link"><i class="bi bi-link-45deg"></i></a>
-                </div>
-              </div>
-            </div><!-- End Portfolio Item -->
-
-          </div><!-- End Portfolio Container -->
+          <!-- Project 6 -->
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="350">
+            <div class="research-card" style="--cluster-color: #FF6B9D">
+              <span class="cell-badge"
+                style="background:rgba(255,107,157,0.12); color:#FF6B9D;">
+                Neurons
+              </span>
+              <h4>Neuronal Transcriptomics &amp; Survival Markers</h4>
+              <p>
+                Identifying transcriptional signatures of surviving vs. degenerating neurons
+                in the injured spinal cord. Volcano plot and GO enrichment analysis to
+                nominate neuroprotective candidate genes for therapeutic validation.
+              </p>
+              <span class="tool-tag" style="color:#FF6B9D;border-color:rgba(255,107,157,0.3);background:rgba(255,107,157,0.1)">EnhancedVolcano</span>
+              <span class="tool-tag" style="color:#FF6B9D;border-color:rgba(255,107,157,0.3);background:rgba(255,107,157,0.1)">topGO</span>
+              <span class="tool-tag" style="color:#FF6B9D;border-color:rgba(255,107,157,0.3);background:rgba(255,107,157,0.1)">GEOquery</span>
+            </div>
+          </div>
 
         </div>
-
       </div>
 
-    </section><!-- /Portfolio Section -->
+    </section><!-- /Research Projects -->
 
-    <!-- Services Section -->
-    <section id="services" class="services section">
+    <!-- ================================================================
+         EXPERTISE
+    ================================================================ -->
+    <section id="expertise" class="services section">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
-        <h2>Services</h2>
-        <p>Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos quisquam cupiditate. Et nemo qui impedit suscipit alias ea. Quia fugiat sit in iste officiis commodi quidem hic quas.</p>
-      </div><!-- End Section Title -->
+        <h2>Expertise</h2>
+        <p>
+          Core competencies spanning experimental design, computational analysis,
+          and the neurobiology of spinal cord injury.
+        </p>
+      </div>
 
       <div class="container">
-
         <div class="row gy-4">
 
           <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="100">
-            <div class="icon flex-shrink-0"><i class="bi bi-briefcase"></i></div>
+            <div class="icon flex-shrink-0"><i class="bi bi-diagram-3" style="color: var(--umap-research)"></i></div>
             <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Lorem Ipsum</a></h4>
-              <p class="description">Voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident</p>
+              <h4 class="title">scRNA-seq Pipeline</h4>
+              <p class="description">
+                End-to-end analysis: ambient RNA filtering, doublet removal, normalization,
+                PCA, UMAP, clustering, and automated cell-type annotation.
+              </p>
             </div>
           </div>
-          <!-- End Service Item -->
+
+          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="150">
+            <div class="icon flex-shrink-0"><i class="bi bi-activity" style="color: var(--umap-skills)"></i></div>
+            <div>
+              <h4 class="title">Differential Expression</h4>
+              <p class="description">
+                Robust statistical testing with edgeR, DESeq2, and Wilcoxon rank-sum
+                tests to identify condition-specific and cell-type-specific DEGs.
+              </p>
+            </div>
+          </div>
 
           <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="200">
-            <div class="icon flex-shrink-0"><i class="bi bi-card-checklist"></i></div>
+            <div class="icon flex-shrink-0"><i class="bi bi-share" style="color: var(--umap-resume)"></i></div>
             <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Dolor Sitema</a></h4>
-              <p class="description">Minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat tarad limino ata</p>
+              <h4 class="title">Cell–Cell Communication</h4>
+              <p class="description">
+                Ligand–receptor interaction mapping with CellChat and CELLCALL to reveal
+                intercellular signaling networks in the SCI microenvironment.
+              </p>
             </div>
-          </div><!-- End Service Item -->
+          </div>
+
+          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="250">
+            <div class="icon flex-shrink-0"><i class="bi bi-arrow-right-circle" style="color: var(--umap-expertise)"></i></div>
+            <div>
+              <h4 class="title">Trajectory &amp; Pseudotime</h4>
+              <p class="description">
+                Reconstructing developmental and activation trajectories with Monocle3
+                to reveal the temporal ordering of cellular transitions after injury.
+              </p>
+            </div>
+          </div>
 
           <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="300">
-            <div class="icon flex-shrink-0"><i class="bi bi-bar-chart"></i></div>
+            <div class="icon flex-shrink-0"><i class="bi bi-graph-up" style="color: var(--umap-contact)"></i></div>
             <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Sed ut perspiciatis</a></h4>
-              <p class="description">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur</p>
+              <h4 class="title">Enrichment Analysis</h4>
+              <p class="description">
+                GO and KEGG pathway enrichment using clusterProfiler and topGO to
+                translate gene lists into biological insights about SCI pathology.
+              </p>
             </div>
-          </div><!-- End Service Item -->
-
-          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="400">
-            <div class="icon flex-shrink-0"><i class="bi bi-binoculars"></i></div>
-            <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Magni Dolores</a></h4>
-              <p class="description">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</p>
-            </div>
-          </div><!-- End Service Item -->
-
-          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="500">
-            <div class="icon flex-shrink-0"><i class="bi bi-brightness-high"></i></div>
-            <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Nemo Enim</a></h4>
-              <p class="description">At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque</p>
-            </div>
-          </div><!-- End Service Item -->
-
-          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="600">
-            <div class="icon flex-shrink-0"><i class="bi bi-calendar4-week"></i></div>
-            <div>
-              <h4 class="title"><a href="service-details.html" class="stretched-link">Eiusmod Tempor</a></h4>
-              <p class="description">Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi</p>
-            </div>
-          </div><!-- End Service Item -->
-
-        </div>
-
-      </div>
-
-    </section><!-- /Services Section -->
-
-    <!-- Testimonials Section -->
-    <section id="testimonials" class="testimonials section light-background">
-
-      <!-- Section Title -->
-      <div class="container section-title" data-aos="fade-up">
-        <h2>Testimonials</h2>
-        <p>Necessitatibus eius consequatur ex aliquid fuga eum quidem sint consectetur velit</p>
-      </div><!-- End Section Title -->
-
-      <div class="container" data-aos="fade-up" data-aos-delay="100">
-
-        <div class="swiper init-swiper">
-          <script type="application/json" class="swiper-config">
-            {
-              "loop": true,
-              "speed": 600,
-              "autoplay": {
-                "delay": 5000
-              },
-              "slidesPerView": "auto",
-              "pagination": {
-                "el": ".swiper-pagination",
-                "type": "bullets",
-                "clickable": true
-              },
-              "breakpoints": {
-                "320": {
-                  "slidesPerView": 1,
-                  "spaceBetween": 40
-                },
-                "1200": {
-                  "slidesPerView": 3,
-                  "spaceBetween": 1
-                }
-              }
-            }
-          </script>
-          <div class="swiper-wrapper">
-
-            <div class="swiper-slide">
-              <div class="testimonial-item">
-                <p>
-                  <i class="bi bi-quote quote-icon-left"></i>
-                  <span>Proin iaculis purus consequat sem cure digni ssim donec porttitora entum suscipit rhoncus. Accusantium quam, ultricies eget id, aliquam eget nibh et. Maecen aliquam, risus at semper.</span>
-                  <i class="bi bi-quote quote-icon-right"></i>
-                </p>
-                <img src="assets/img/testimonials/testimonials-1.jpg" class="testimonial-img" alt="">
-                <h3>Saul Goodman</h3>
-                <h4>Ceo &amp; Founder</h4>
-              </div>
-            </div><!-- End testimonial item -->
-
-            <div class="swiper-slide">
-              <div class="testimonial-item">
-                <p>
-                  <i class="bi bi-quote quote-icon-left"></i>
-                  <span>Export tempor illum tamen malis malis eram quae irure esse labore quem cillum quid malis quorum velit fore eram velit sunt aliqua noster fugiat irure amet legam anim culpa.</span>
-                  <i class="bi bi-quote quote-icon-right"></i>
-                </p>
-                <img src="assets/img/testimonials/testimonials-2.jpg" class="testimonial-img" alt="">
-                <h3>Sara Wilsson</h3>
-                <h4>Designer</h4>
-              </div>
-            </div><!-- End testimonial item -->
-
-            <div class="swiper-slide">
-              <div class="testimonial-item">
-                <p>
-                  <i class="bi bi-quote quote-icon-left"></i>
-                  <span>Enim nisi quem export duis labore cillum quae magna enim sint quorum nulla quem veniam duis minim tempor labore quem eram duis noster aute amet eram fore quis sint minim.</span>
-                  <i class="bi bi-quote quote-icon-right"></i>
-                </p>
-                <img src="assets/img/testimonials/testimonials-3.jpg" class="testimonial-img" alt="">
-                <h3>Jena Karlis</h3>
-                <h4>Store Owner</h4>
-              </div>
-            </div><!-- End testimonial item -->
-
-            <div class="swiper-slide">
-              <div class="testimonial-item">
-                <p>
-                  <i class="bi bi-quote quote-icon-left"></i>
-                  <span>Fugiat enim eram quae cillum dolore dolor amet nulla culpa multos export minim fugiat dolor enim duis veniam ipsum anim magna sunt elit fore quem dolore labore illum veniam.</span>
-                  <i class="bi bi-quote quote-icon-right"></i>
-                </p>
-                <img src="assets/img/testimonials/testimonials-4.jpg" class="testimonial-img" alt="">
-                <h3>Matt Brandon</h3>
-                <h4>Freelancer</h4>
-              </div>
-            </div><!-- End testimonial item -->
-
-            <div class="swiper-slide">
-              <div class="testimonial-item">
-                <p>
-                  <i class="bi bi-quote quote-icon-left"></i>
-                  <span>Quis quorum aliqua sint quem legam fore sunt eram irure aliqua veniam tempor noster veniam sunt culpa nulla illum cillum fugiat legam esse veniam culpa fore nisi cillum quid.</span>
-                  <i class="bi bi-quote quote-icon-right"></i>
-                </p>
-                <img src="assets/img/testimonials/testimonials-5.jpg" class="testimonial-img" alt="">
-                <h3>John Larson</h3>
-                <h4>Entrepreneur</h4>
-              </div>
-            </div><!-- End testimonial item -->
-
           </div>
-          <div class="swiper-pagination"></div>
-        </div>
 
+          <div class="col-lg-4 col-md-6 service-item d-flex" data-aos="fade-up" data-aos-delay="350">
+            <div class="icon flex-shrink-0"><i class="bi bi-journal-medical" style="color: var(--umap-about)"></i></div>
+            <div>
+              <h4 class="title">SCI Neurobiology</h4>
+              <p class="description">
+                Deep domain knowledge in spinal cord injury — secondary injury mechanisms,
+                glial scarring, neuroinflammation, and regenerative strategies.
+              </p>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-    </section><!-- /Testimonials Section -->
+    </section><!-- /Expertise -->
 
-    <!-- Contact Section -->
+    <!-- ================================================================
+         CONTACT
+    ================================================================ -->
     <section id="contact" class="contact section">
 
-      <!-- Section Title -->
       <div class="container section-title" data-aos="fade-up">
         <h2>Contact</h2>
-        <p>Necessitatibus eius consequatur ex aliquid fuga eum quidem sint consectetur velit</p>
-      </div><!-- End Section Title -->
+        <p>
+          Interested in collaboration, questions about my research, or just want to connect?
+          I'm happy to hear from you.
+        </p>
+      </div>
 
       <div class="container" data-aos="fade-up" data-aos-delay="100">
-
         <div class="row gy-4">
 
           <div class="col-lg-5">
-
             <div class="info-wrap">
+
               <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="200">
-                <i class="bi bi-geo-alt flex-shrink-0"></i>
+                <i class="bi bi-linkedin flex-shrink-0" style="color: var(--umap-contact)"></i>
                 <div>
-                  <h3>Address</h3>
-                  <p>A108 Adam Street, New York, NY 535022</p>
+                  <h3>LinkedIn</h3>
+                  <p>
+                    <a href="https://www.linkedin.com/in/mustafa-ozturgut/" target="_blank" rel="noopener noreferrer">
+                      linkedin.com/in/mustafa-ozturgut
+                    </a>
+                  </p>
                 </div>
-              </div><!-- End Info Item -->
+              </div>
+
+              <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="250">
+                <i class="bi bi-github flex-shrink-0" style="color: var(--umap-resume)"></i>
+                <div>
+                  <h3>GitHub</h3>
+                  <p>
+                    <a href="https://github.com/mozturgut" target="_blank" rel="noopener noreferrer">
+                      github.com/mozturgut
+                    </a>
+                  </p>
+                </div>
+              </div>
 
               <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="300">
-                <i class="bi bi-telephone flex-shrink-0"></i>
+                <i class="bi bi-envelope flex-shrink-0" style="color: var(--umap-research)"></i>
                 <div>
-                  <h3>Call Us</h3>
-                  <p>+1 5589 55488 55</p>
+                  <h3>Email</h3>
+                  <p>[your.email@university.edu]</p>
                 </div>
-              </div><!-- End Info Item -->
+              </div>
 
-              <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="400">
-                <i class="bi bi-envelope flex-shrink-0"></i>
+              <div class="info-item d-flex" data-aos="fade-up" data-aos-delay="350">
+                <i class="bi bi-geo-alt flex-shrink-0" style="color: var(--umap-skills)"></i>
                 <div>
-                  <h3>Email Us</h3>
-                  <p>info@example.com</p>
+                  <h3>Location</h3>
+                  <p>[City, State, USA]</p>
                 </div>
-              </div><!-- End Info Item -->
+              </div>
 
-              <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d48389.78314118045!2d-74.006138!3d40.710059!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a22a3bda30d%3A0xb89d1fe6bc499443!2sDowntown%20Conference%20Center!5e0!3m2!1sen!2sus!4v1676961268712!5m2!1sen!2sus" frameborder="0" style="border:0; width: 100%; height: 270px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
           </div>
 
           <div class="col-lg-7">
-            <form action="forms/contact.php" method="post" class="php-email-form" data-aos="fade-up" data-aos-delay="200">
+            <form action="forms/contact.php" method="post" class="php-email-form"
+                  data-aos="fade-up" data-aos-delay="200">
               <div class="row gy-4">
-
                 <div class="col-md-6">
                   <label for="name-field" class="pb-2">Your Name</label>
-                  <input type="text" name="name" id="name-field" class="form-control" required="">
+                  <input type="text" name="name" id="name-field" class="form-control" required>
                 </div>
-
                 <div class="col-md-6">
                   <label for="email-field" class="pb-2">Your Email</label>
-                  <input type="email" class="form-control" name="email" id="email-field" required="">
+                  <input type="email" class="form-control" name="email" id="email-field" required>
                 </div>
-
                 <div class="col-md-12">
                   <label for="subject-field" class="pb-2">Subject</label>
-                  <input type="text" class="form-control" name="subject" id="subject-field" required="">
+                  <input type="text" class="form-control" name="subject" id="subject-field" required>
                 </div>
-
                 <div class="col-md-12">
                   <label for="message-field" class="pb-2">Message</label>
-                  <textarea class="form-control" name="message" rows="10" id="message-field" required=""></textarea>
+                  <textarea class="form-control" name="message" rows="8"
+                            id="message-field" required></textarea>
                 </div>
-
                 <div class="col-md-12 text-center">
                   <div class="loading">Loading</div>
                   <div class="error-message"></div>
                   <div class="sent-message">Your message has been sent. Thank you!</div>
-
                   <button type="submit">Send Message</button>
                 </div>
-
               </div>
             </form>
-          </div><!-- End Contact Form -->
+          </div>
 
         </div>
-
       </div>
 
-    </section><!-- /Contact Section -->
+    </section><!-- /Contact -->
 
   </main>
 
+  <!-- ================================================================
+       FOOTER
+  ================================================================ -->
   <footer id="footer" class="footer position-relative light-background">
-
     <div class="container">
-      <div class="copyright text-center ">
-        <p>© <span>Copyright</span> <strong class="px-1 sitename">iPortfolio</strong> <span>All Rights Reserved</span></p>
+      <div class="copyright text-center">
+        <p>
+          &copy; <span>2025</span>
+          <strong class="px-1 sitename">Mustafa Ozturgut</strong>
+          — All Rights Reserved
+        </p>
       </div>
-      <div class="credits">
-        <!-- All the links in the footer should remain intact. -->
-        <!-- You can delete the links only if you've purchased the pro version. -->
-        <!-- Licensing information: https://bootstrapmade.com/license/ -->
-        <!-- Purchase the pro version with working PHP/AJAX contact form: [buy-url] -->
-        Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a>
+      <div class="credits text-center" style="font-size: 0.8rem; color: #aaa;">
+        Built for single-cell science |
+        Template base: <a href="https://bootstrapmade.com/">BootstrapMade</a>
       </div>
     </div>
-
   </footer>
 
   <!-- Scroll Top -->
-  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center">
+    <i class="bi bi-arrow-up-short"></i>
+  </a>
 
   <!-- Preloader -->
   <div id="preloader"></div>
@@ -825,6 +1029,373 @@
   <!-- Main JS File -->
   <script src="assets/js/main.js"></script>
 
-</body>
+  <!-- ================================================================
+       SPINAL CORD UMAP — Canvas Animation
+  ================================================================ -->
+  <script>
+  (function () {
+    'use strict';
 
+    /* ------------------------------------------------------------------
+       1. CLUSTER DEFINITIONS
+       Each cluster = one vertebral region of the spinal cord.
+       cx/cy are the cluster centroid on the 420×700 canvas.
+       The clusters are arranged to form a spinal-cord silhouette:
+         - Cervical (top, slightly wider)
+         - Thoracic (narrow middle)
+         - Lumbar (wider lower)
+         - Sacral (tapering bottom)
+    ------------------------------------------------------------------ */
+    var CLUSTERS = [
+      {
+        id: 'about',     name: 'About',     section: '#about',
+        vertebra: 'C1\u2013C2', cellType: 'Microglia',
+        color: '#FF6B9D',
+        cx: 213, cy: 68,  count: 60,  spread: 25
+      },
+      {
+        id: 'research',  name: 'Research',  section: '#research',
+        vertebra: 'C3\u2013C7', cellType: 'Oligodendrocytes',
+        color: '#BF5AF2',
+        cx: 206, cy: 175, count: 128, spread: 46
+      },
+      {
+        id: 'skills',    name: 'Skills',    section: '#skills',
+        vertebra: 'T1\u2013T6', cellType: 'Astrocytes',
+        color: '#2DD4BF',
+        cx: 198, cy: 299, count: 110, spread: 38
+      },
+      {
+        id: 'resume',    name: 'Experience', section: '#resume',
+        vertebra: 'T7\u2013T12', cellType: 'Neurons',
+        color: '#34D399',
+        cx: 201, cy: 418, count: 122, spread: 41
+      },
+      {
+        id: 'expertise', name: 'Expertise', section: '#expertise',
+        vertebra: 'L1\u2013L3', cellType: 'Macrophages',
+        color: '#FBBF24',
+        cx: 219, cy: 528, count: 110, spread: 44
+      },
+      {
+        id: 'contact',   name: 'Contact',   section: '#contact',
+        vertebra: 'L4\u2013S2', cellType: 'Neutrophils',
+        color: '#60A5FA',
+        cx: 226, cy: 628, count: 70,  spread: 29
+      }
+    ];
+
+    /* ------------------------------------------------------------------
+       2. CANVAS SETUP
+    ------------------------------------------------------------------ */
+    var canvas  = document.getElementById('spinal-umap');
+    if (!canvas) return;
+    var ctx     = canvas.getContext('2d');
+    var W       = canvas.width;   // 420
+    var H       = canvas.height;  // 700
+    var tooltip = document.getElementById('umap-tooltip');
+
+    /* ------------------------------------------------------------------
+       3. SEEDED PSEUDO-RANDOM (deterministic dot placement)
+    ------------------------------------------------------------------ */
+    var _s = 0x1B3F5A7D;
+    function rnd() {
+      _s = (Math.imul(_s, 1664525) + 1013904223) | 0;
+      return (_s >>> 0) / 4294967296;
+    }
+    function gauss() {
+      var u = Math.max(rnd(), 1e-9), v = rnd();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    /* ------------------------------------------------------------------
+       4. GENERATE DOTS
+    ------------------------------------------------------------------ */
+    var dots = [];
+
+    CLUSTERS.forEach(function (cl) {
+      for (var i = 0; i < cl.count; i++) {
+        dots.push({
+          cx:      cl.cx + gauss() * cl.spread,
+          cy:      cl.cy + gauss() * cl.spread,
+          r:       1.5 + rnd() * 2.1,
+          color:   cl.color,
+          cluster: cl.id,
+          phase:   rnd() * Math.PI * 2,
+          speed:   0.55 + rnd() * 1.5
+        });
+      }
+    });
+
+    /* sparse interstitial "noise" cells along the spinal column */
+    var NOISE = 65;
+    for (var n = 0; n < NOISE; n++) {
+      dots.push({
+        cx:      172 + rnd() * 88,
+        cy:      42  + rnd() * 640,
+        r:       0.7 + rnd() * 0.9,
+        color:   '#7890b8',
+        cluster: null,
+        phase:   rnd() * Math.PI * 2,
+        speed:   0.25 + rnd() * 0.7
+      });
+    }
+
+    /* ------------------------------------------------------------------
+       5. UTILITY: hex colour -> "r,g,b"
+    ------------------------------------------------------------------ */
+    function rgb(hex) {
+      var n = parseInt(hex.slice(1), 16);
+      return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    }
+
+    /* ------------------------------------------------------------------
+       6. UTILITY: rounded rectangle path (cross-browser)
+    ------------------------------------------------------------------ */
+    function rrect(c, x, y, w, h, r) {
+      if (c.roundRect) {
+        c.roundRect(x, y, w, h, r);
+      } else {
+        c.moveTo(x + r, y);
+        c.lineTo(x + w - r, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + r);
+        c.lineTo(x + w, y + h - r);
+        c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        c.lineTo(x + r, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - r);
+        c.lineTo(x, y + r);
+        c.quadraticCurveTo(x, y, x + r, y);
+        c.closePath();
+      }
+    }
+
+    /* ------------------------------------------------------------------
+       7. STATE
+    ------------------------------------------------------------------ */
+    var hovered = null;   // currently-hovered cluster id
+    var t       = 0;      // animation time
+    var noiseStart = dots.length - NOISE;
+
+    /* ------------------------------------------------------------------
+       8. DRAW LOOP
+    ------------------------------------------------------------------ */
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      /* ---- UMAP axis guides ---- */
+      ctx.save();
+      ctx.strokeStyle = 'rgba(140,165,220,0.22)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.moveTo(28, H - 20); ctx.lineTo(W - 16, H - 20); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(22, H - 26); ctx.lineTo(22, 18);         ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      /* ---- Axis labels ---- */
+      ctx.save();
+      ctx.font      = '10px monospace';
+      ctx.fillStyle = 'rgba(140,168,228,0.32)';
+      ctx.fillText('UMAP 1', W / 2 - 22, H - 5);
+      ctx.translate(13, H / 2 + 28);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('UMAP 2', 0, 0);
+      ctx.restore();
+
+      /* ---- Noise / interstitial dots ---- */
+      for (var i = noiseStart; i < dots.length; i++) {
+        var d = dots[i];
+        var a = 0.15 + 0.09 * Math.sin(t * d.speed + d.phase);
+        ctx.beginPath();
+        ctx.arc(d.cx, d.cy, d.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + rgb(d.color) + ',' + a + ')';
+        ctx.fill();
+      }
+
+      /* ---- Cluster dots ---- */
+      CLUSTERS.forEach(function (cl) {
+        var isH   = hovered === cl.id;
+        var clRgb = rgb(cl.color);
+
+        for (var i = 0; i < noiseStart; i++) {
+          var d = dots[i];
+          if (d.cluster !== cl.id) continue;
+
+          var pulse  = 0.52 + 0.22 * Math.sin(t * d.speed + d.phase);
+          var bright = isH ? 0.93 : pulse;
+          var radius = d.r * (isH ? 1.5 : 1.0);
+
+          if (isH) {
+            /* radial glow halo */
+            ctx.beginPath();
+            ctx.arc(d.cx, d.cy, radius * 3.2, 0, Math.PI * 2);
+            var grd = ctx.createRadialGradient(d.cx, d.cy, 0, d.cx, d.cy, radius * 3.2);
+            grd.addColorStop(0, 'rgba(' + clRgb + ',0.20)');
+            grd.addColorStop(1, 'rgba(' + clRgb + ',0.00)');
+            ctx.fillStyle = grd;
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(d.cx, d.cy, radius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(' + clRgb + ',' + bright + ')';
+          ctx.fill();
+        }
+      });
+
+      /* ---- Labels + connector lines ---- */
+      CLUSTERS.forEach(function (cl) {
+        var isH    = hovered === cl.id;
+        var clRgb  = rgb(cl.color);
+        var lx     = cl.cx + 60;
+        var ly     = cl.cy + 4;
+
+        /* connector line */
+        ctx.beginPath();
+        ctx.moveTo(cl.cx + cl.spread * 0.68, cl.cy);
+        ctx.lineTo(lx - 6, ly - 4);
+        ctx.strokeStyle = 'rgba(' + clRgb + ',' + (isH ? 0.85 : 0.30) + ')';
+        ctx.lineWidth   = isH ? 1.6 : 0.8;
+        ctx.stroke();
+
+        /* label */
+        ctx.font = isH ? 'bold 13px Poppins,sans-serif' : '12px Poppins,sans-serif';
+        var tw   = ctx.measureText(cl.name).width;
+
+        if (isH) {
+          /* pill background */
+          var pad = 5;
+          ctx.beginPath();
+          rrect(ctx, lx - pad, ly - 15, tw + pad * 2, 22, 5);
+          ctx.fillStyle = 'rgba(' + clRgb + ',0.14)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(' + clRgb + ',0.45)';
+          ctx.lineWidth   = 1;
+          ctx.beginPath();
+          rrect(ctx, lx - pad, ly - 15, tw + pad * 2, 22, 5);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(' + clRgb + ',' + (isH ? 1.0 : 0.60) + ')';
+        ctx.fillText(cl.name, lx, ly);
+
+        if (isH) {
+          ctx.font      = '9px monospace';
+          ctx.fillStyle = 'rgba(' + clRgb + ',0.65)';
+          ctx.fillText(cl.vertebra + ' \u00b7 ' + cl.cellType, lx, ly + 14);
+        }
+      });
+
+      t += 0.018;
+      requestAnimationFrame(draw);
+    }
+
+    /* ------------------------------------------------------------------
+       9. HOVER / CLICK INTERACTION
+    ------------------------------------------------------------------ */
+    function clusterAt(mx, my) {
+      var best = null, bestD = 82;
+      CLUSTERS.forEach(function (cl) {
+        var d = Math.hypot(mx - cl.cx, my - cl.cy);
+        if (d < bestD) { bestD = d; best = cl.id; }
+      });
+      return best;
+    }
+
+    canvas.addEventListener('mousemove', function (e) {
+      var rect  = canvas.getBoundingClientRect();
+      var sx    = W / rect.width;
+      var sy    = H / rect.height;
+      var mx    = (e.clientX - rect.left) * sx;
+      var my    = (e.clientY - rect.top)  * sy;
+
+      hovered = clusterAt(mx, my);
+      canvas.style.cursor = hovered ? 'pointer' : 'default';
+
+      if (hovered && tooltip) {
+        var cl = CLUSTERS.filter(function (c) { return c.id === hovered; })[0];
+        tooltip.querySelector('.tt-name').textContent  = cl.name;
+        tooltip.querySelector('.tt-name').style.color  = cl.color;
+        tooltip.querySelector('.tt-sub').textContent   =
+          cl.vertebra + ' \u00b7 ' + cl.cellType + ' \u00b7 click to navigate';
+        tooltip.style.borderColor = cl.color;
+        tooltip.style.display     = 'block';
+        tooltip.style.left        = (e.clientX + 14) + 'px';
+        tooltip.style.top         = (e.clientY - 14) + 'px';
+      } else if (tooltip) {
+        tooltip.style.display = 'none';
+      }
+    });
+
+    canvas.addEventListener('mouseleave', function () {
+      hovered = null;
+      canvas.style.cursor = 'default';
+      if (tooltip) tooltip.style.display = 'none';
+    });
+
+    canvas.addEventListener('click', function (e) {
+      var rect = canvas.getBoundingClientRect();
+      var sx   = W / rect.width;
+      var sy   = H / rect.height;
+      var mx   = (e.clientX - rect.left) * sx;
+      var my   = (e.clientY - rect.top)  * sy;
+      var cid  = clusterAt(mx, my);
+      if (cid) {
+        var cl  = CLUSTERS.filter(function (c) { return c.id === cid; })[0];
+        var tgt = document.querySelector(cl.section);
+        if (tgt) tgt.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    /* ------------------------------------------------------------------
+       10. BACKGROUND PARTICLE CANVAS (hero ambient effect)
+    ------------------------------------------------------------------ */
+    var bgCanvas = document.getElementById('hero-particles');
+    if (bgCanvas) {
+      var bctx = bgCanvas.getContext('2d');
+      var bW   = 0, bH = 0;
+      var bPts = [];
+
+      function resizeBg() {
+        bW = bgCanvas.width  = bgCanvas.offsetWidth  || window.innerWidth;
+        bH = bgCanvas.height = bgCanvas.offsetHeight || window.innerHeight;
+      }
+      resizeBg();
+      window.addEventListener('resize', resizeBg);
+
+      for (var p = 0; p < 90; p++) {
+        bPts.push({
+          x:  Math.random() * 1400,
+          y:  Math.random() * 900,
+          vx: (Math.random() - 0.5) * 0.22,
+          vy: (Math.random() - 0.5) * 0.22,
+          r:  0.7 + Math.random() * 1.6,
+          a:  0.04 + Math.random() * 0.13
+        });
+      }
+
+      (function bgLoop() {
+        bctx.clearRect(0, 0, bW, bH);
+        bPts.forEach(function (pt) {
+          pt.x += pt.vx; pt.y += pt.vy;
+          if (pt.x < 0) pt.x = bW; if (pt.x > bW) pt.x = 0;
+          if (pt.y < 0) pt.y = bH; if (pt.y > bH) pt.y = 0;
+          bctx.beginPath();
+          bctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          bctx.fillStyle = 'rgba(140,185,255,' + pt.a + ')';
+          bctx.fill();
+        });
+        requestAnimationFrame(bgLoop);
+      })();
+    }
+
+    /* ------------------------------------------------------------------
+       11. START
+    ------------------------------------------------------------------ */
+    draw();
+
+  })();
+  </script>
+
+</body>
 </html>
