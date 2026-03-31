@@ -1037,6 +1037,12 @@
     'use strict';
 
     /* ------------------------------------------------------------------
+       0. DISPLAY CONSTANTS
+    ------------------------------------------------------------------ */
+    var EN_DASH    = '\u2013'; /* – */
+    var MIDDLE_DOT = '\u00b7'; /* · */
+
+    /* ------------------------------------------------------------------
        1. CLUSTER DEFINITIONS
        Each cluster = one vertebral region of the spinal cord.
        cx/cy are the cluster centroid on the 420×700 canvas.
@@ -1049,37 +1055,37 @@
     var CLUSTERS = [
       {
         id: 'about',     name: 'About',     section: '#about',
-        vertebra: 'C1\u2013C2', cellType: 'Microglia',
+        vertebra: 'C1' + EN_DASH + 'C2', cellType: 'Microglia',
         color: '#FF6B9D',
         cx: 213, cy: 68,  count: 60,  spread: 25
       },
       {
         id: 'research',  name: 'Research',  section: '#research',
-        vertebra: 'C3\u2013C7', cellType: 'Oligodendrocytes',
+        vertebra: 'C3' + EN_DASH + 'C7', cellType: 'Oligodendrocytes',
         color: '#BF5AF2',
         cx: 206, cy: 175, count: 128, spread: 46
       },
       {
         id: 'skills',    name: 'Skills',    section: '#skills',
-        vertebra: 'T1\u2013T6', cellType: 'Astrocytes',
+        vertebra: 'T1' + EN_DASH + 'T6', cellType: 'Astrocytes',
         color: '#2DD4BF',
         cx: 198, cy: 299, count: 110, spread: 38
       },
       {
         id: 'resume',    name: 'Experience', section: '#resume',
-        vertebra: 'T7\u2013T12', cellType: 'Neurons',
+        vertebra: 'T7' + EN_DASH + 'T12', cellType: 'Neurons',
         color: '#34D399',
         cx: 201, cy: 418, count: 122, spread: 41
       },
       {
         id: 'expertise', name: 'Expertise', section: '#expertise',
-        vertebra: 'L1\u2013L3', cellType: 'Macrophages',
+        vertebra: 'L1' + EN_DASH + 'L3', cellType: 'Macrophages',
         color: '#FBBF24',
         cx: 219, cy: 528, count: 110, spread: 44
       },
       {
         id: 'contact',   name: 'Contact',   section: '#contact',
-        vertebra: 'L4\u2013S2', cellType: 'Neutrophils',
+        vertebra: 'L4' + EN_DASH + 'S2', cellType: 'Neutrophils',
         color: '#60A5FA',
         cx: 226, cy: 628, count: 70,  spread: 29
       }
@@ -1104,6 +1110,7 @@
       return (_s >>> 0) / 4294967296;
     }
     function gauss() {
+      /* Box-Muller transform: converts uniform random [0,1] to Gaussian N(0,1) */
       var u = Math.max(rnd(), 1e-9), v = rnd();
       return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
     }
@@ -1282,7 +1289,7 @@
         if (isH) {
           ctx.font      = '9px monospace';
           ctx.fillStyle = 'rgba(' + clRgb + ',0.65)';
-          ctx.fillText(cl.vertebra + ' \u00b7 ' + cl.cellType, lx, ly + 14);
+          ctx.fillText(cl.vertebra + ' ' + MIDDLE_DOT + ' ' + cl.cellType, lx, ly + 14);
         }
       });
 
@@ -1317,7 +1324,7 @@
         tooltip.querySelector('.tt-name').textContent  = cl.name;
         tooltip.querySelector('.tt-name').style.color  = cl.color;
         tooltip.querySelector('.tt-sub').textContent   =
-          cl.vertebra + ' \u00b7 ' + cl.cellType + ' \u00b7 click to navigate';
+          cl.vertebra + ' ' + MIDDLE_DOT + ' ' + cl.cellType + ' ' + MIDDLE_DOT + ' click to navigate';
         tooltip.style.borderColor = cl.color;
         tooltip.style.display     = 'block';
         tooltip.style.left        = (e.clientX + 14) + 'px';
